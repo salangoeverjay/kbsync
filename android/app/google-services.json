@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1002686729184",
+    "project_id": "kabayansync",
+    "storage_bucket": "kabayansync.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1002686729184:android:7ab67da97c0e38fd5d7985",
+        "android_client_info": {
+          "package_name": "com.example.kbsync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTUU8K4pFt5J9fAZEaCkIbeBYpwr-sPDQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
