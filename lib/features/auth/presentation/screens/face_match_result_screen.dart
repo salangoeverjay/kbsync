@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:kbsync/core/routing/app_routes.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
@@ -24,12 +25,14 @@ class FaceMatchResultScreen extends StatefulWidget {
 }
 
 class _FaceMatchResultScreenState extends State<FaceMatchResultScreen>
-    with SingleTickerProviderStateMixin {
+  with TickerProviderStateMixin {
   final VerificationApiService _verificationApiService = VerificationApiService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   late final AnimationController _checkController;
   late final Animation<double> _checkScale;
   late final Animation<double> _checkOpacity;
+  late final AnimationController _pulseController;
 
   Timer? _progressTimer;
   _MatchStage _stage = _MatchStage.verifying;
@@ -51,6 +54,10 @@ class _FaceMatchResultScreenState extends State<FaceMatchResultScreen>
       parent: _checkController,
       curve: Curves.easeOut,
     );
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    )..repeat(reverse: true);
 
     _startProgressTicker();
     _runFaceMatch();
@@ -93,6 +100,15 @@ class _FaceMatchResultScreenState extends State<FaceMatchResultScreen>
         _score = result.score;
       });
 
+      final userId = widget.userId.trim();
+      if (userId.isNotEmpty) {
+        await _firestore.collection('users').doc(userId).set({
+          'verificationStatus': 'approved',
+          'isVerified': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
       await Future<void>.delayed(const Duration(milliseconds: 380));
       if (!mounted) return;
 
@@ -112,6 +128,7 @@ class _FaceMatchResultScreenState extends State<FaceMatchResultScreen>
   void dispose() {
     _progressTimer?.cancel();
     _checkController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -140,30 +157,56 @@ class _FaceMatchResultScreenState extends State<FaceMatchResultScreen>
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(
-          width: 180,
-          height: 180,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              _pulseRing(132, 0.18),
-              _pulseRing(104, 0.28),
-              _pulseRing(76, 0.38),
-              Container(
-                width: 58,
-                height: 58,
-                decoration: const BoxDecoration(
-                  color: AppColors.orange,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.center_focus_strong,
-                  color: Colors.white,
-                  size: 28,
-                ),
+        AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, child) {
+            final pulse = _pulseController.value;
+            final outerScale = 1.0 + (pulse * 0.16);
+            final innerScale = 1.0 + (pulse * 0.08);
+            final ringOpacity = 0.42 - (pulse * 0.18);
+
+            return SizedBox(
+              width: 176,
+              height: 176,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Transform.scale(
+                    scale: outerScale * (0.98 + (pulse * 0.02)),
+                    child: _pulseRing(160, ringOpacity * 0.5),
+                  ),
+                  Transform.scale(
+                    scale: innerScale,
+                    child: _pulseRing(126, ringOpacity),
+                  ),
+                  Transform.scale(
+                    scale: 0.98 + (pulse * 0.07),
+                    child: Container(
+                      width: 92,
+                      height: 92,
+                      decoration: BoxDecoration(
+                        color: AppColors.orange,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.orange.withValues(alpha: 0.24 + (pulse * 0.12)),
+                            blurRadius: 24,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.center_focus_strong,
+                        color: Colors.white,
+                        size: 34,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
         const SizedBox(height: 22),
         const Text(
@@ -389,7 +432,10 @@ class _FaceMatchResultScreenState extends State<FaceMatchResultScreen>
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.orange.withValues(alpha: alpha), width: 1.2),
+        border: Border.all(
+          color: AppColors.orange.withValues(alpha: alpha.clamp(0.0, 1.0)),
+          width: 1.4,
+        ),
       ),
     );
   }

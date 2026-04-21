@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
-import 'package:kbsync/features/auth/presentation/screens/face_match_prototype_screen.dart';
+import 'package:kbsync/features/auth/presentation/screens/face_match_result_screen.dart';
 import 'package:kbsync/features/auth/presentation/screens/verification_complete_screen.dart';
 
 class ReviewDetailsPrototypeScreen extends StatelessWidget {
@@ -129,10 +130,13 @@ class ReviewDetailsPrototypeScreen extends StatelessWidget {
                     builder: (_) => VerificationCompleteScreen(
                       requiresPassiveLiveness: true,
                       detectedLabel: 'Verify Liveness',
-                      onVerified: () {
+                      onPassiveLivenessApproved: (selfiePath) {
+                        final userId = FirebaseAuth.instance.currentUser?.uid ?? 'unknown-user';
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                            builder: (_) => FaceMatchPrototypeScreen(
+                            builder: (_) => FaceMatchResultScreen(
+                              userId: userId,
+                              userImagePath: selfiePath,
                               referenceImagePath: referenceImagePath,
                             ),
                           ),

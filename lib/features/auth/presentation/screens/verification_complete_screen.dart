@@ -1,11 +1,11 @@
 import 'package:camera/camera.dart';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show WriteBuffer;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
 import 'package:kbsync/features/auth/data/verification_api_service.dart';
-import 'dart:io' show Platform;
 
 class VerificationCompleteScreen extends StatefulWidget {
   final String title;
@@ -18,6 +18,7 @@ class VerificationCompleteScreen extends StatefulWidget {
   final String? passiveLivenessUserId;
   final int faceLivenessScoreDeclineThreshold;
   final bool rotateImageForLiveness;
+  final ValueChanged<String>? onPassiveLivenessApproved;
 
   const VerificationCompleteScreen({
     super.key,
@@ -32,6 +33,7 @@ class VerificationCompleteScreen extends StatefulWidget {
     this.passiveLivenessUserId,
     this.faceLivenessScoreDeclineThreshold = 70,
     this.rotateImageForLiveness = true,
+    this.onPassiveLivenessApproved,
   });
 
   @override
@@ -341,6 +343,10 @@ class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
       if (!mounted) return;
 
       if (result.isApproved) {
+        if (widget.onPassiveLivenessApproved != null) {
+          widget.onPassiveLivenessApproved!(picture.path);
+          return;
+        }
         _completeFlow();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

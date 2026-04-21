@@ -8,6 +8,20 @@ class SignUpResult {
   const SignUpResult({required this.credential, required this.profileSaved});
 }
 
+class UserVerificationState {
+  final String uid;
+  final String? role;
+  final String verificationStatus;
+
+  const UserVerificationState({
+    required this.uid,
+    required this.verificationStatus,
+    this.role,
+  });
+
+  bool get isApproved => verificationStatus.toLowerCase() == 'approved';
+}
+
 class FirebaseAuthService {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -47,6 +61,8 @@ class FirebaseAuthService {
           'fullName': fullName.trim(),
           'email': email.trim(),
           'role': role,
+          'verificationStatus': 'pending',
+          'isVerified': false,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -60,6 +76,30 @@ class FirebaseAuthService {
   }
 
   Future<void> signOut() => _auth.signOut();
+
+  Future<void> updateVerificationStatus({
+    required String uid,
+    required String verificationStatus,
+  }) {
+    return _firestore.collection('users').doc(uid).set({
+      'verificationStatus': verificationStatus,
+      'isVerified': verificationStatus.toLowerCase() == 'approved',
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<UserVerificationState?> getVerificationState({required String uid}) async {
+    final snapshot = await _firestore.collection('users').doc(uid).get();
+    final data = snapshot.data();
+    if (data == null) return null;
+
+    return UserVerificationState(
+      uid: uid,
+      role: data['role'] as String?,
+      verificationStatus: (data['verificationStatus'] as String?) ??
+          ((data['isVerified'] == true) ? 'approved' : 'pending'),
+    );
+  }
 
   Future<void> sendPasswordResetEmail({required String email}) {
     return _auth.sendPasswordResetEmail(email: email.trim());

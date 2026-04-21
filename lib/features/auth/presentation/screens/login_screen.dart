@@ -80,6 +80,27 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _authService.signIn(email: email, password: password);
       if (!mounted) return;
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null || uid.isEmpty) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'Unable to read the signed-in user.',
+        );
+      }
+
+      final verificationState = await _authService.getVerificationState(uid: uid);
+      if (!mounted) return;
+
+      if (verificationState == null || !verificationState.isApproved) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Complete ID and face verification before login.')),
+        );
+        await _authService.signOut();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed(AppRoutes.verificationPrototype);
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login successful.')),
       );
@@ -90,6 +111,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_authMessage(error))),
+      );
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Unable to verify account status.')),
       );
     } finally {
       if (mounted) {
