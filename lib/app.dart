@@ -4,9 +4,10 @@ import 'package:kbsync/core/routing/app_routes.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
 import 'package:kbsync/features/auth/presentation/screens/login_screen.dart';
 import 'package:kbsync/features/auth/presentation/screens/signup_screen.dart';
+import 'package:kbsync/features/auth/presentation/screens/verification_prototype_screen.dart';
+import 'package:kbsync/features/auth/presentation/screens/worker_task_biometric_prototype_screen.dart';
 import 'package:kbsync/features/onboarding/presentation/screens/loading_screen.dart';
 import 'package:kbsync/features/onboarding/presentation/screens/welcome_screen.dart';
-import 'package:kbsync/features/verification/presentation/screens/verification_document_screen.dart';
 
 class KbSyncApp extends StatelessWidget {
   const KbSyncApp({super.key});
@@ -35,7 +36,9 @@ class KbSyncApp extends StatelessWidget {
         AppRoutes.welcome: (_) => const NeighborhoodWelcomeScreen(),
         AppRoutes.signUp: (_) => const SignUpScreen(),
         AppRoutes.login: (_) => const LoginScreen(),
-        AppRoutes.verificationDocument: (_) => const VerificationDocumentScreen(),
+        AppRoutes.verificationPrototype: (_) => const VerificationPrototypeScreen(),
+        AppRoutes.workerTaskBiometricPrototype: (_) =>
+            const WorkerTaskBiometricPrototypeScreen(),
       },
     );
   }

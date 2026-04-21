@@ -1,0 +1,37 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
+import 'sdk_flutter_platform_interface.dart';
+
+/// MethodChannel implementation of [SdkFlutterPlatform].
+class MethodChannelSdkFlutter extends SdkFlutterPlatform {
+  @visibleForTesting
+  final methodChannel = const MethodChannel('didit_sdk');
+
+  @override
+  Future<Map<String, dynamic>> startVerification(
+    String token,
+    Map<String, dynamic>? config,
+  ) async {
+    final result = await methodChannel.invokeMethod<Map>('startVerification', {
+      'token': token,
+      'config': config,
+    });
+    return Map<String, dynamic>.from(result ?? {});
+  }
+
+  @override
+  Future<Map<String, dynamic>> startVerificationWithWorkflow(
+    String workflowId,
+    String? vendorData,
+    Map<String, dynamic>? config,
+  ) async {
+    final result = await methodChannel
+        .invokeMethod<Map>('startVerificationWithWorkflow', {
+      'workflowId': workflowId,
+      'vendorData': vendorData,
+      'config': config,
+    });
+    return Map<String, dynamic>.from(result ?? {});
+  }
+}

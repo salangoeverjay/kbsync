@@ -83,6 +83,9 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login successful.')),
       );
+      Navigator.of(context).pushReplacementNamed(
+        AppRoutes.workerTaskBiometricPrototype,
+      );
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

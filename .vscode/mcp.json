@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "didit": {
+      "command": "npx",
+      "args": ["-y", "@didit-protocol/mcp-server"],
+      "env": {
+        "DIDIT_API_KEY": "${env:DIDIT_API_KEY}"
+      }
+    }
+  }
+}

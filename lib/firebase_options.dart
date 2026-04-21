@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'kabayansync.firebasestorage.app',
     measurementId: 'G-3BZ19NS7BH',
   );
+
 }

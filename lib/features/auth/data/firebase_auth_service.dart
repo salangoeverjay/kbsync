@@ -5,21 +5,16 @@ class SignUpResult {
   final UserCredential credential;
   final bool profileSaved;
 
-  const SignUpResult({
-    required this.credential,
-    required this.profileSaved,
-  });
+  const SignUpResult({required this.credential, required this.profileSaved});
 }
 
 class FirebaseAuthService {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
-  FirebaseAuthService({
-    FirebaseAuth? auth,
-    FirebaseFirestore? firestore,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  FirebaseAuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+    : _auth = auth ?? FirebaseAuth.instance,
+      _firestore = firestore ?? FirebaseFirestore.instance;
 
   Future<UserCredential> signIn({
     required String email,
@@ -61,17 +56,12 @@ class FirebaseAuthService {
       }
     }
 
-    return SignUpResult(
-      credential: credential,
-      profileSaved: profileSaved,
-    );
+    return SignUpResult(credential: credential, profileSaved: profileSaved);
   }
 
   Future<void> signOut() => _auth.signOut();
 
-  Future<void> sendPasswordResetEmail({
-    required String email,
-  }) {
+  Future<void> sendPasswordResetEmail({required String email}) {
     return _auth.sendPasswordResetEmail(email: email.trim());
   }
 }

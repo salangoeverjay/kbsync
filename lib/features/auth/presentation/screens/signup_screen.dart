@@ -80,7 +80,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ? 'Account created successfully.'
           : 'Account created, but profile sync failed. Enable Firestore API.';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-      Navigator.of(context).pushReplacementNamed(AppRoutes.verificationDocument);
+        Navigator.of(context).pushReplacementNamed(AppRoutes.verificationPrototype);
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -26,6 +26,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is required for identity verification.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>NFC is used to read passport and ID card chips for identity verification.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location access is used for fraud prevention during verification.</string>
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>A0000002471001</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

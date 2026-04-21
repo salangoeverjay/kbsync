@@ -133,6 +133,8 @@ KA-BAYAN SYNC provides:
 
 ### Biometric Verification
 - Entrance + Exit scans
+- Entrance scan is mandatory before worker can start task
+- Exit scan is mandatory before worker can complete task and trigger payment
 
 ### GPS Tracking
 - Real-time presence validation
@@ -155,6 +157,10 @@ KA-BAYAN SYNC provides:
 5. Evidence capture
 6. Exit scan
 7. Payment
+
+Enforcement:
+- `Start Task` remains locked until entrance biometric scan passes
+- `Finish Task` remains locked until exit biometric scan passes
 
 ---
 
