@@ -1,0 +1,6 @@
+.env
+.env.local
+*service-account*.json
+serviceAccountKey.json
+.dart_tool/
+build/

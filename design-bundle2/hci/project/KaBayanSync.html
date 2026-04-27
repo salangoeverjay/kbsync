@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KA-BAYAN SYNC</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #1a0f14; display: flex; align-items: center; justify-content: center; font-family: 'Public Sans', sans-serif; }
+  #root { display: flex; align-items: center; justify-content: center; min-height: 100vh; width: 100%; }
+  .phone-shell {
+    width: 390px; height: 844px; border-radius: 50px; overflow: hidden;
+    position: relative; background: #faf5ff;
+    box-shadow: 0 0 0 10px #111, 0 30px 80px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+  .screen { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+  .slide-in { animation: slideIn 0.32s cubic-bezier(0.4,0,0.2,1) forwards; }
+  .slide-out { animation: slideOut 0.32s cubic-bezier(0.4,0,0.2,1) forwards; }
+  .slide-up { animation: slideUp 0.32s cubic-bezier(0.4,0,0.2,1) forwards; }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  @keyframes slideOut { from { transform: translateX(0); } to { transform: translateX(-40px); opacity: 0; } }
+  @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes scanLine { 0%,100% { top: 10%; } 50% { top: 85%; } }
+  @keyframes ping { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.2); opacity: 0; } }
+  @keyframes countdown { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 565; } }
+  @keyframes fadeIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
+  @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+  .status-bar { height: 48px; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 28px 6px; font-size: 12px; font-weight: 600; color: inherit; flex-shrink: 0; }
+  .btn-plum { background: #911b44; color: #fff; border: none; border-radius: 12px; height: 51px; width: 100%; font-family: 'Public Sans', sans-serif; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.15s; }
+  .btn-plum:active { filter: brightness(0.9); transform: scale(0.98); }
+  .btn-orange { background: #ec5914; color: #fff; border: none; border-radius: 12px; height: 51px; width: 100%; font-family: 'Public Sans', sans-serif; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.15s; }
+  .btn-orange:active { filter: brightness(0.9); transform: scale(0.98); }
+  .btn-ghost { background: transparent; color: #911b44; border: 2px solid rgba(145,27,68,0.2); border-radius: 12px; height: 51px; width: 100%; font-family: 'Public Sans', sans-serif; font-weight: 700; font-size: 16px; cursor: pointer; }
+  .input-field { background: #fff; border: 1.5px solid rgba(145,27,68,0.25); border-radius: 12px; height: 52px; width: 100%; padding: 0 16px; font-family: 'Public Sans', sans-serif; font-size: 14px; color: #2d1923; outline: none; transition: border-color 0.2s; }
+  .input-field:focus { border-color: #911b44; }
+  .input-field::placeholder { color: rgba(190,200,209,0.9); }
+  .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: rgba(250,245,255,0.95); backdrop-filter: blur(24px); box-shadow: 0 -4px 24px rgba(19,26,52,0.06); border-radius: 0 0 50px 50px; display: flex; align-items: center; justify-content: space-around; padding: 0 8px 12px; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 8px 16px; border-radius: 16px; transition: all 0.15s; flex: 1; }
+  .nav-item.active { background: rgba(145,27,68,0.08); }
+  .nav-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: rgb(190,200,209); }
+  .nav-label.active { color: #911b44; }
+  .card { background: #fff; border-radius: 20px; padding: 20px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); }
+  .tag-verified { background: rgba(113,250,200,0.3); border: 1px solid rgba(0,108,79,0.1); color: rgb(0,81,59); padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+  .progress-bar-track { height: 7px; border-radius: 20px; background: rgba(255,90,0,0.25); }
+  .progress-bar-fill { height: 7px; border-radius: 20px; background: #f25c05; }
+  .map-bg { background: #c8d8c0; position: relative; overflow: hidden; }
+  .map-grid { position: absolute; inset: 0; opacity: 0.3; background-image: linear-gradient(rgba(100,130,100,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(100,130,100,0.4) 1px, transparent 1px); background-size: 30px 30px; }
+  .map-road-h { position: absolute; background: rgba(255,255,255,0.7); height: 8px; left: 0; right: 0; border-radius: 2px; }
+  .map-road-v { position: absolute; background: rgba(255,255,255,0.7); width: 8px; top: 0; bottom: 0; border-radius: 2px; }
+  .face-oval { border-radius: 50%; border: 3px solid; overflow: hidden; position: relative; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ── COLORS ──
+const C = {
+  plum: '#911b44',
+  plumDark: '#3c1226',
+  plumDeep: '#7c012d',
+  orange: '#ec5914',
+  orangeLight: '#ffe7db',
+  bg: '#faf5ff',
+  bgWhite: '#fff',
+  textDark: '#2d1923',
+  green: '#006c4f',
+  greenLight: '#afe4dc',
+  greenPale: '#d4feef',
+};
+
+// ── ICONS (SVG inline) ──
+const Icon = ({ name, size = 20, color = C.plum, style = {} }) => {
+  const icons = {
+    back: <path d="M3.825 9L9.425 14.6L8 16L0 8L8 0L9.425 1.4L3.825 7L16 7L16 9Z" fill={color}/>,
+    menu: <path d="M0 12L0 10L18 10L18 12ZM0 7L0 5L18 5L18 7ZM0 2L0 0L18 0L18 2Z" fill={color}/>,
+    bell: <><path d="M10 18c0 1.1-.9 2-2 2s-2-.9-2-2H10zm8-3H2v-1l2-2V8c0-3.1 2-5.6 5-6.3V1a1 1 0 012 0v.7C14 2.4 16 4.9 16 8v4l2 2v1z" fill={color}/></>,
+    check: <path d="M2 10l5 5L18 4" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+    star: <path d="M2.231 11.083L3.179 6.985L0 4.229L4.2 3.865L5.833 0L7.467 3.865L11.667 4.229L8.488 6.985L9.435 11.083L5.833 8.91Z" fill={color}/>,
+    location: <><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill={color}/></>,
+    camera: <><path d="M12 15.2A3.2 3.2 0 1015.2 12 3.2 3.2 0 0012 15.2zM20 6h-2.83L16 4H8L6.83 6H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2z" fill={color}/></>,
+    filter: <path d="M7 12L7 10L11 10L11 12ZM3 7L3 5L15 5L15 7ZM0 2L0 0L18 0L18 2Z" fill={color}/>,
+    face: <><circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.5" fill="none"/><circle cx="9" cy="11" r="1" fill={color}/><circle cx="15" cy="11" r="1" fill={color}/><path d="M9 16s1 1.5 3 1.5 3-1.5 3-1.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" fill="none"/></>,
+    id: <><rect x="2" y="5" width="20" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="none"/><path d="M6 9h12M6 13h7" stroke={color} strokeWidth="1.5" strokeLinecap="round"/></>,
+    wallet: <><path d="M21 7H3a1 1 0 00-1 1v12a1 1 0 001 1h18a1 1 0 001-1V8a1 1 0 00-1-1z" stroke={color} strokeWidth="1.5" fill="none"/><path d="M16 14a1 1 0 110-2 1 1 0 010 2z" fill={color}/><path d="M3 7V5a2 2 0 012-2h14a2 2 0 012 2v2" stroke={color} strokeWidth="1.5"/></>,
+    profile: <><circle cx="12" cy="8" r="4" stroke={color} strokeWidth="1.5" fill="none"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={color} strokeWidth="1.5" strokeLinecap="round" fill="none"/></>,
+    home: <><path d="M3 12L12 3l9 9" stroke={color} strokeWidth="1.5" strokeLinecap="round" fill="none"/><path d="M9 21V12h6v9" stroke={color} strokeWidth="1.5" fill="none"/></>,
+    tasks: <><rect x="3" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" fill="none"/><rect x="14" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" fill="none"/><rect x="3" y="14" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" fill="none"/><rect x="14" y="14" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" fill="none"/></>,
+    edit: <><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke={color} strokeWidth="1.5" fill="none" strokeLinejoin="round"/></>,
+    shield: <><path d="M12 2L3 7v5c0 5.25 3.9 10.17 9 11.34C17.1 22.17 21 17.25 21 12V7L12 2z" stroke={color} strokeWidth="1.5" fill="none"/><path d="M9 12l2 2 4-4" stroke={color} strokeWidth="1.5" strokeLinecap="round" fill="none"/></>,
+  };
+  const viewBoxes = { menu: '0 0 18 12', filter: '0 0 18 12', back: '0 0 16 16', check: '0 0 20 20', star: '0 0 11.667 11.083' };
+  const vb = viewBoxes[name] || `0 0 24 24`;
+  return (
+    <svg width={size} height={size} viewBox={vb} fill="none" style={style}>
+      {icons[name]}
+    </svg>
+  );
+};
+
+// ── STATUS BAR ──
+const StatusBar = ({ light = false }) => (
+  <div className="status-bar" style={{ color: light ? '#fff' : C.plumDark }}>
+    <span>9:41</span>
+    <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 14, width: 120, height: 34, background: light ? 'rgba(0,0,0,0.5)' : '#1a0f14', borderRadius: 20 }} />
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill={light ? '#fff' : C.plumDark}><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="0" width="2" height="12" rx="1" opacity="0.3"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0.5" y="0.5" width="13" height="11" rx="2" stroke={light ? '#fff' : C.plumDark}/><rect x="2" y="2" width="9" height="8" rx="1" fill={light ? '#fff' : C.plumDark}/><rect x="14" y="4" width="2" height="4" rx="1" fill={light ? '#fff' : C.plumDark}/></svg>
+    </div>
+  </div>
+);
+
+// ── BACK HEADER ──
+const BackHeader = ({ title, onBack, light = false, rightEl = null }) => (
+  <div style={{ height: 60, background: light ? C.plum : C.bg, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16 }}>
+    <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name="back" size={16} color={light ? '#fff' : C.plum} />
+    </button>
+    <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 18, color: light ? '#fff' : C.plumDark, flex: 1 }}>{title}</span>
+    {rightEl}
+  </div>
+);
+
+// ── MAIN APP HEADER ──
+const AppHeader = ({ onNotif }) => (
+  <div style={{ height: 72, background: 'rgb(250,248,255)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <Icon name="menu" size={18} color={C.plum} />
+      <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 20, letterSpacing: '-1px', color: C.plum }}>KA-BAYAN SYNC</span>
+    </div>
+    <button onClick={onNotif} style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(236,89,20,0.2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name="bell" size={20} color={C.plum} />
+    </button>
+  </div>
+);
+
+// ── BOTTOM NAV ──
+const BottomNav = ({ active, onNav }) => {
+  const tabs = [
+    { id: 'home', label: 'Home', icon: 'home' },
+    { id: 'tasks', label: 'Tasks', icon: 'tasks' },
+    { id: 'wallet', label: 'Wallet', icon: 'wallet' },
+    { id: 'profile', label: 'Profile', icon: 'profile' },
+  ];
+  return (
+    <div className="bottom-nav">
+      {tabs.map(t => (
+        <button key={t.id} onClick={() => onNav(t.id)} className={`nav-item ${active===t.id?'active':''}`} style={{ background: active===t.id ? 'rgba(145,27,68,0.08)' : 'transparent', border: 'none', cursor: 'pointer' }}>
+          <Icon name={t.icon} size={22} color={active===t.id ? C.plum : 'rgb(190,200,209)'} />
+          <span className={`nav-label ${active===t.id?'active':''}`}>{t.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════
+// SCREENS
+// ═══════════════════════════════════════════════════
+
+// ── WELCOME ──
+const WelcomeScreen = ({ nav }) => (
+  <div className="screen" style={{ background: C.plum, display: 'flex', flexDirection: 'column' }}>
+    <StatusBar light />
+    {/* Hero image placeholder */}
+    <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #5c0c24 0%, #3c1226 40%, #911b44 100%)' }} />
+      {/* decorative circles */}
+      <div style={{ position: 'absolute', top: -60, right: -60, width: 280, height: 280, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+      <div style={{ position: 'absolute', top: 60, right: 30, width: 180, height: 180, borderRadius: '50%', background: 'rgba(236,89,20,0.12)' }} />
+      <div style={{ position: 'absolute', top: 20, left: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
+      {/* Illustration placeholder */}
+      <div style={{ position: 'absolute', top: '8%', left: '50%', transform: 'translateX(-50%)', width: 260, height: 260, borderRadius: 32, background: 'rgba(217,217,217,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed rgba(255,255,255,0.15)' }}>
+        <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', fontSize: 11 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>🏘️</div>
+          <div>community illustration</div>
+        </div>
+      </div>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 38px 40px' }}>
+        <h1 style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: 38, lineHeight: '42px', letterSpacing: '0.5px', color: C.plumDark, marginBottom: 14 }}>
+          Welcome to the<br/>Neighborhood.
+        </h1>
+        <p style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: 16, lineHeight: '22px', color: 'rgba(255,255,255,0.85)', textAlign: 'justify', marginBottom: 32 }}>
+          Ka-Bayan Sync connects you with locals. Offer your skills and build stronger community together.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <button className="btn-plum" onClick={() => nav('signup')} style={{ background: '#fff', color: C.plum, fontSize: 15, letterSpacing: 0.2 }}>
+            Join Ka-Bayan Sync
+          </button>
+          <button className="btn-ghost" onClick={() => nav('signin')} style={{ borderColor: 'rgba(255,255,255,0.3)', color: '#fff', fontSize: 15 }}>
+            I already have an account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ── SIGN UP ──
+const SignUpScreen = ({ nav }) => {
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  return (
+    <div className="screen" style={{ background: C.plum, display: 'flex', flexDirection: 'column' }}>
+      <StatusBar light />
+      <div style={{ flex: 1, background: C.bg, borderRadius: '28px 28px 0 0', marginTop: 4, display: 'flex', flexDirection: 'column', padding: '32px 32px 40px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
+          <button onClick={() => nav('welcome')} style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(145,27,68,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="back" size={16} color={C.plumDark} />
+          </button>
+          <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 22, color: C.plumDark }}>Create your account</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 28 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: C.plum, letterSpacing: 1, display: 'block', marginBottom: 6 }}>FULL NAME</label>
+            <input className="input-field" placeholder="Juan D. Dela Cruz" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: C.plum, letterSpacing: 1, display: 'block', marginBottom: 6 }}>EMAIL ADDRESS</label>
+            <input className="input-field" type="email" placeholder="juan@email.com" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: C.plum, letterSpacing: 1, display: 'block', marginBottom: 6 }}>PASSWORD</label>
+            <input className="input-field" type="password" placeholder="••••••••" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+          </div>
+        </div>
+        {/* Step indicators */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 28 }}>
+          {[C.orange, 'rgba(255,90,0,0.25)', 'rgba(255,90,0,0.25)'].map((c,i) => (
+            <div key={i} style={{ flex: 1, height: 7, borderRadius: 20, background: c }} />
+          ))}
+        </div>
+        <button className="btn-orange" onClick={() => nav('id-select')}>Create Account</button>
+        <p style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: C.plum, fontFamily: 'Work Sans', fontWeight: 300 }}>
+          Already have an account? <span style={{ color: '#ff7f1c', fontWeight: 700, cursor: 'pointer' }} onClick={() => nav('signin')}>Sign in</span>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ── SIGN IN ──
+const SignInScreen = ({ nav }) => (
+  <div className="screen" style={{ background: C.plum, display: 'flex', flexDirection: 'column' }}>
+    <StatusBar light />
+    <div style={{ flex: 1, background: C.bg, borderRadius: '28px 28px 0 0', marginTop: 4, display: 'flex', flexDirection: 'column', padding: '32px 32px 40px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 36 }}>
+        <button onClick={() => nav('welcome')} style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(145,27,68,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="back" size={16} color={C.plumDark} />
+        </button>
+        <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 21, color: C.plumDark }}>Welcome back, Ka-Bayan!</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: C.plum, letterSpacing: 1, display: 'block', marginBottom: 6 }}>EMAIL ADDRESS</label>
+          <input className="input-field" type="email" placeholder="juan@email.com" />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: C.plum, letterSpacing: 1, display: 'block', marginBottom: 6 }}>PASSWORD</label>
+          <input className="input-field" type="password" placeholder="••••••••" />
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+          <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${C.plum}`, background: 'transparent' }} />
+          <span style={{ fontSize: 12, fontWeight: 500, color: C.plum }}>Remember me</span>
+        </label>
+        <span style={{ fontSize: 12, fontWeight: 700, color: C.orange, cursor: 'pointer' }}>Forgot password?</span>
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 28 }}>
+        {[C.orange, C.orange, 'rgba(255,90,0,0.25)'].map((c,i) => (
+          <div key={i} style={{ flex: 1, height: 7, borderRadius: 20, background: c }} />
+        ))}
+      </div>
+      <button className="btn-orange" onClick={() => nav('hirer-home')}>Log in</button>
+      <p style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: C.plum, fontFamily: 'Work Sans', fontWeight: 300 }}>
+        Don't have an account? <span style={{ color: '#ff7f1c', fontWeight: 700, cursor: 'pointer' }} onClick={() => nav('signup')}>Sign up</span>
+      </p>
+    </div>
+  </div>
+);
+
+// ── ID SELECT ──
+const IDSelectScreen = ({ nav }) => (
+  <div className="screen" style={{ background: C.plum, display: 'flex', flexDirection: 'column' }}>
+    <StatusBar light />
+    <div style={{ flex: 1, background: C.bg, borderRadius: '28px 28px 0 0', marginTop: 4, padding: '28px 28px 40px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
+        <button onClick={() => nav('signup')} style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(145,27,68,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="back" size={16} color={C.plumDark} />
+        </button>
+        <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 22, color: C.plumDark }}>Sign up</span>
+      </div>
+      <h2 style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 28, lineHeight: '38px', letterSpacing: '-1px', color: C.plum, marginBottom: 28 }}>
+        Choose your verification document.
+      </h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {[
+          { title: 'National ID', sub: 'Government issued' },
+          { title: 'Student ID', sub: 'University issued' },
+          { title: 'Barangay ID', sub: 'Local government issued' },
+        ].map((item, i) => (
+          <button key={i} onClick={() => nav('id-scan')} style={{ background: '#fff', border: 'none', borderRadius: 24, padding: '20px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}>
+            <div style={{ width: 60, height: 60, borderRadius: 18, background: C.orangeLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon name="id" size={28} color={C.orange} />
+            </div>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <div style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 18, color: C.plum }}>{item.title}</div>
+              <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: 13, color: C.textDark, opacity: 0.6 }}>{item.sub}</div>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,90,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke={C.orange} strokeWidth="2" strokeLinecap="round"/></svg>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// ── ID SCAN ──
+const IDScanScreen = ({ nav }) => {
+  const [scanned, setScanned] = useState(false);
+  useEffect(() => {
+    if (scanned) { const t = setTimeout(() => nav('id-review'), 800); return () => clearTimeout(t); }
+  }, [scanned]);
+  return (
+    <div className="screen" style={{ background: C.bg, display: 'flex', flexDirection: 'column' }}>
+      <StatusBar />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 20px 8px' }}>
+        <button onClick={() => nav('id-select')} style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="back" size={16} color={C.plumDark} />
+        </button>
+        <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 21, color: C.plumDark }}>Verify National ID</span>
+      </div>
+      {/* Progress */}
+      <div style={{ display: 'flex', gap: 4, padding: '0 28px', marginBottom: 24 }}>
+        {[C.orange, 'rgba(255,90,0,0.25)', 'rgba(255,90,0,0.25)'].map((c,i) => (
+          <div key={i} style={{ flex: 1, height: 7, borderRadius: 20, background: c }} />
+        ))}
+      </div>
+      {/* Camera viewfinder */}
+      <div style={{ margin: '0 auto', width: 340, height: 220, background: '#1a1a1a', borderRadius: 20, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #1a1a2e, #0f0f1a)' }} />
+        {/* Corner marks */}
+        {[{t:12,l:12,tr:'br'},{t:12,r:12,tr:'bl'},{b:12,l:12,tr:'tr'},{b:12,r:12,tr:'tl'}].map((p,i) => {
+          const s = { position:'absolute', width:24, height:24, border:`3px solid ${C.orange}`, ...p };
+          const borders = { br:'borderTopLeftRadius', bl:'borderTopRightRadius', tr:'borderBottomLeftRadius', tl:'borderBottomRightRadius' };
+          return <div key={i} style={{ ...s, [borders[p.tr]]: 0, borderTopRightRadius: p.tr==='tr'?0:8, borderTopLeftRadius: p.tr==='tl'?8:p.tr==='bl'?8:0, borderBottomRightRadius: p.tr==='bl'?0:8, borderBottomLeftRadius: p.tr==='br'?0:8 }} />;
+        })}
+        {/* Scan line */}
+        {!scanned && <div style={{ position: 'absolute', left: 20, right: 20, height: 2, background: `linear-gradient(90deg, transparent, ${C.orange}, transparent)`, animation: 'scanLine 2s ease-in-out infinite' }} />}
+        {scanned && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,200,100,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ width: 64, height: 64, background: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 16px rgba(34,197,94,0.2)' }}>
+              <Icon name="check" size={28} color="#fff" />
+            </div>
+          </div>
+        )}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.15 }}>
+          <Icon name="id" size={80} color="#fff" />
+        </div>
+      </div>
+      <div style={{ textAlign: 'center', padding: '32px 40px 0' }}>
+        <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,90,0,0.1)', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="camera" size={28} color={C.orange} />
+        </div>
+        <h3 style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: 22, color: C.plum, marginBottom: 10 }}>Scan Document</h3>
+        <p style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 14, color: C.textDark, opacity: 0.6, lineHeight: '22px' }}>
+          Align your ID within the frame until<br />it is captured automatically.
+        </p>
+      </div>
+      <div style={{ marginTop: 'auto', padding: '20px 32px 36px' }}>
+        <button className="btn-orange" onClick={() => setScanned(true)}>
+          {scanned ? 'Captured! Processing...' : 'Simulate Capture'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ── ID REVIEW ──
+const IDReviewScreen = ({ nav }) => (
+  <div className="screen" style={{ background: C.bg, display: 'flex', flexDirection: 'column' }}>
+    <StatusBar />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 20px 8px' }}>
+      <button onClick={() => nav('id-scan')} style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name="back" size={16} color={C.plumDark} />
+      </button>
+      <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 21, color: C.plumDark }}>Verify National ID</span>
+    </div>
+    <div style={{ display: 'flex', gap: 4, padding: '0 28px', marginBottom: 20 }}>
+      {[C.orange, C.orange, 'rgba(255,90,0,0.25)'].map((c,i) => (
+        <div key={i} style={{ flex: 1, height: 7, borderRadius: 20, background: c }} />
+      ))}
+    </div>
+    <div style={{ padding: '0 28px 28px', flex: 1, overflow: 'auto' }}>
+      <p style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 15, color: C.textDark, marginBottom: 24, lineHeight: '22px' }}>
+        Confirm that the extracted details match your ID.
+      </p>
+      <div style={{ background: '#fff', borderRadius: 20, padding: '8px 0', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', marginBottom: 20 }}>
+        {[
+          ['Task ID', 'KB-20260407'],
+          ['Full Name', 'Juan Dela Cruz'],
+          ['DOB', '15 Oct 1998'],
+          ['ID Number', '1234-5678-9012'],
+          ['Sex', 'Male'],
+          ['Blood Type', 'O+'],
+        ].map(([k, v], i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '13px 20px', borderBottom: i < 5 ? '1px solid rgba(178,178,178,0.2)' : 'none' }}>
+            <span style={{ fontFamily: 'Public Sans', fontWeight: 500, fontSize: 13, color: C.textDark, opacity: 0.6 }}>{k}</span>
+            <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 13, color: C.plum }}>{v}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <button className="btn-orange" onClick={() => nav('face-scan')}>Confirm &amp; Proceed</button>
+        <button className="btn-ghost" onClick={() => nav('id-scan')}>Retake ID Photo</button>
+      </div>
+    </div>
+  </div>
+);
+
+// ── FACE SCAN ──
+const FaceScanScreen = ({ nav }) => {
+  const [phase, setPhase] = useState('ready'); // ready, scanning, done
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    if (phase !== 'scanning') return;
+    const iv = setInterval(() => {
+      setProgress(p => {
+        if (p >= 100) { clearInterval(iv); setPhase('done'); return 100; }
+        return p + 2;
+      });
+    }, 60);
+    return () => clearInterval(iv);
+  }, [phase]);
+  useEffect(() => {
+    if (phase === 'done') { const t = setTimeout(() => nav('verify-success'), 1200); return () => clearTimeout(t); }
+  }, [phase]);
+
+  return (
+    <div className="screen" style={{ background: C.bg, display: 'flex', flexDirection: 'column' }}>
+      <StatusBar />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 20px 8px' }}>
+        <button onClick={() => nav('id-review')} style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="back" size={16} color={C.plumDark} />
+        </button>
+        <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 21, color: C.plumDark }}>Verify Identity</span>
+      </div>
+      <div style={{ display: 'flex', gap: 4, padding: '0 28px', marginBottom: 20 }}>
+        {[C.orange, C.orange, C.orange].map((c,i) => (
+          <div key={i} style={{ flex: 1, height: 7, borderRadius: 20, background: c }} />
+        ))}
+      </div>
+      {/* Face oval */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+        <div style={{ position: 'relative', width: 260, height: 300 }}>
+          {/* Oval border */}
+          <svg width="260" height="300" viewBox="0 0 260 300" style={{ position: 'absolute', inset: 0 }}>
+            <ellipse cx="130" cy="150" rx="118" ry="140"
+              stroke={phase==='done' ? '#22c55e' : C.orange}
+              strokeWidth="3"
+              strokeDasharray={phase==='scanning' ? '12 6' : 'none'}
+              fill={phase==='done' ? 'rgba(34,197,94,0.08)' : 'rgba(4,0,0,0.85)'}
+              style={{ transition: 'all 0.4s' }}
+            />
+            {phase==='scanning' && <ellipse cx="130" cy="150" rx="118" ry="140" stroke="rgba(236,89,20,0.3)" strokeWidth="12" fill="none" style={{ animation: 'pulse 1.5s infinite' }} />}
+          </svg>
+          {/* Face placeholder */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {phase === 'done'
+              ? <div style={{ animation: 'fadeIn 0.4s ease' }}><Icon name="check" size={60} color="#22c55e" /></div>
+              : <Icon name="face" size={72} color={phase==='ready'?'rgba(255,255,255,0.2)':'rgba(236,89,20,0.4)'} />
+            }
+          </div>
+          {/* Scan progress ring */}
+          {phase === 'scanning' && (
+            <svg width="260" height="300" viewBox="0 0 260 300" style={{ position: 'absolute', inset: 0 }}>
+              <ellipse cx="130" cy="150" rx="118" ry="140" stroke={C.plum} strokeWidth="3" fill="none"
+                strokeDasharray={`${(progress/100)*752} 752`} strokeLinecap="round"
+                style={{ transform: 'rotate(-90deg)', transformOrigin: '130px 150px', transition: 'stroke-dasharray 0.1s' }}
+              />
+            </svg>
+          )}
+          {/* Side arrows for liveness */}
+          {phase === 'scanning' && (
+            <>
+              <div style={{ position: 'absolute', left: -10, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, background: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="white"><path d="M12 8L6 2l-1.4 1.4L9.2 8l-4.6 4.6L6 14z"/></svg>
+              </div>
+              <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, background: C.orange, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="white"><path d="M4 8l6 6 1.4-1.4L6.8 8l4.6-4.6L10 2z"/></svg>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      <div style={{ textAlign: 'center', padding: '0 32px' }}>
+        <h3 style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 20, letterSpacing: '-0.6px', color: C.plumDeep, marginBottom: 8 }}>
+          {phase==='ready' ? 'Position your face within the frame.' : phase==='scanning' ? 'Slowly turn your head left and right.' : 'Scan complete!'}
+        </h3>
+        <p style={{ fontFamily: 'Public Sans', fontWeight: 500, fontSize: 13, color: C.orange, lineHeight: '19px' }}>
+          {phase==='ready' ? 'Make sure you are in a well-lit area and your face is clearly visible.' : phase==='scanning' ? `Follow the arrows to complete identity verification. ${progress}% complete` : 'Face verified successfully!'}
+        </p>
+      </div>
+      <div style={{ marginTop: 'auto', padding: '20px 32px 36px' }}>
+        {phase === 'ready'
+          ? <button className="btn-orange" onClick={() => setPhase('scanning')}>Start Scanning</button>
+          : phase === 'scanning'
+          ? <button className="btn-plum" disabled style={{ opacity: 0.7 }}>{progress}% Complete</button>
+          : <button className="btn-plum" style={{ background: '#22c55e' }}>Verified!</button>
+        }
+      </div>
+    </div>
+  );
+};
+
+// ── VERIFICATION SUCCESS ──
+const VerifySuccessScreen = ({ nav }) => (
+  <div className="screen" style={{ background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <StatusBar />
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
+      <div style={{ width: 120, height: 120, background: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 16px 32px rgba(34,197,94,0.25)', marginBottom: 32, animation: 'fadeIn 0.5s ease' }}>
+        <Icon name="check" size={52} color="#fff" />
+      </div>
+      <h2 style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: 28, letterSpacing: '-0.5px', color: C.plumDeep, textAlign: 'center', marginBottom: 12 }}>Verification Success!</h2>
+      <p style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: 16, color: 'rgba(0,0,0,0.7)', textAlign: 'center', lineHeight: '24px', marginBottom: 24 }}>Face and ID match confirmed.</p>
+      <div style={{ background: 'rgba(34,197,94,0.1)', borderRadius: 24, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 48 }}>
+        <Icon name="shield" size={18} color='rgb(22,101,52)' />
+        <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: 14, color: 'rgb(22,101,52)' }}>Ka-Bayan Verified!</span>
+      </div>
+    </div>
+    <div style={{ width: '100%', padding: '0 28px 48px' }}>
+      <button className="btn-orange" onClick={() => nav('hirer-home')}>Get Started as Hirer</button>
+      <div style={{ height: 12 }} />
+      <button className="btn-plum" onClick={() => nav('worker-home')}>Get Started as Worker</button>
+    </div>
+  </div>
+);
+
+// ── HIRER HOME (MAP) ──
+const HirerHomeScreen = ({ nav }) => {
+  const [workerSelected, setWorkerSelected] = useState(true);
+  return (
+    <div className="screen" style={{ background: C.bg, display: 'flex', flexDirection: 'column' }}>
+      <StatusBar />
+      <AppHeader onNotif={() => {}} />
+      {/* Map area */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        {/* Map background */}
+        <div className="map-bg" style={{ position: 'absolute', inset: 0, background: '#dce9d3' }}>
+          <div className="map-grid" />
+          <div className="map-road-h" style={{ top: '35%' }} />
+          <div className="map-road-h" style={{ top: '60%' }} />
+          <div className="map-road-v" style={{ left: '28%' }} />
+          <div className="map-road-v" style={{ left: '68%' }} />
+          {/* Buildings */}
+          {[[40,20,50,40],[120,30,60,35],[200,15,45,55],[280,25,55,40],[60,100,40,35],[160,90,60,45],[250,95,50,38]].map(([x,y,w,h],i) => (
+            <div key={i} style={{ position:'absolute', left:x, top:y, width:w, height:h, background:'rgba(160,180,150,0.5)', borderRadius:4 }} />
+          ))}
+          {/* 2km radius circle */}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 240, height: 240, borderRadius: '50%', border: '2px dashed rgb(226,102,34)', background: 'rgba(226,102,34,0.06)' }} />
+          {/* Client marker (center) */}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,101,143,0.2)', animation: 'ping 2s ease-in-out infinite' }} />
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: C.orange, border: '2px solid #fff', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }} />
+          </div>
+          {/* Worker marker */}
+          <div style={{ position: 'absolute', top: '42%', left: '46%', cursor: 'pointer' }} onClick={() => setWorkerSelected(true)}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgb(252,110,98)', border: '2.5px solid #fff', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #d4a5a5, #c07070)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👤</div>
+            </div>
+          </div>
+          {/* Other worker markers */}
+          <div style={{ position: 'absolute', top: '28%', left: '65%' }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#aaa', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>👤</div>
+          </div>
+        </div>
+        {/* Floating search bar */}
+        <div style={{ position: 'absolute', top: 16, left: 24, right: 24, height: 52, background: 'rgba(255,255,255,0.92)', borderRadius: 16, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, backdropFilter: 'blur(12px)', boxShadow: '0 1px 8px rgba(0,0,0,0.08)' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="rgb(110,120,129)" strokeWidth="1.5"/><path d="M21 21l-4-4" stroke="rgb(110,120,129)" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          <span style={{ flex: 1, fontFamily: 'Public Sans', fontWeight: 500, fontSize: 13, color: 'rgb(190,200,209)' }}>Search nearby workers or services...</span>
+          <Icon name="filter" size={18} color={C.green} />
+        </div>
+        {/* Worker detail card */}
+        {workerSelected && (
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '24px 24px 0 0', padding: '20px 20px 16px', boxShadow: '0 -4px 32px rgba(0,0,0,0.12)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg,#d4a5a5,#c07070)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>👤</div>
+                <div>
+                  <div style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 18, letterSpacing: '-0.5px', color: C.textDark }}>Juan Z.</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <Icon name="star" size={11} color="rgb(245,158,11)" />
+                    <span style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 13, color: C.textDark }}>4.7</span>
+                    <span style={{ fontFamily: 'Public Sans', fontWeight: 500, fontSize: 13, color: 'rgb(190,200,209)' }}>• 1 m away</span>
+                  </div>
+                </div>
+              </div>
+              <span className="tag-verified">VERIFIED</span>
+            </div>
+            {/* Entrance scan banner */}
+            <div style={{ background: C.orangeLight, borderRadius: 12, border: `0.7px solid ${C.orange}`, padding: '10px 14px', marginBottom: 14 }}>
+              <div style={{ fontFamily: 'Public Sans', fontWeight: 700, fontSize: 14, color: C.orange, marginBottom: 4 }}>🔍 Entrance Face Scan in Progress</div>
+              <div style={{ fontFamily: 'Public Sans', fontSize: 11, color: C.orange, lineHeight: '17px' }}>Worker is at your doorstep. The session will officially begin once the Face Scan is 100% matched</div>
+            </div>
+            {/* Task details */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid rgba(178,178,178,0.3)', marginBottom: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[['Task ID','KB-4082790'],['Service Category','House Cleaning: Living Room'],['Mode','RUSH'],['Arrived','09:00 AM']].map(([k,v])=>(
+                  <div key={k} style={{ display: 'flex', gap: 16 }}>
+                    <span style={{ fontFamily:'Public Sans', fontWeight:500, fontSize:11, color:C.textDark, opacity:0.5, width:110 }}>{k}</span>
+                    <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:11, color:C.plum }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ borderTop: '1px solid rgba(178,178,178,0.3)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontFamily:'Public Sans', fontWeight:500, fontSize:11, color:C.textDark, opacity:0.5 }}>Total Payment</div>
+                <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:18, color:C.plum }}>₱230</div>
+                <div style={{ fontFamily:'Public Sans', fontSize:10, color:C.textDark, opacity:0.5 }}>Base: ₱180 + Rush: ₱50</div>
+              </div>
+              <button className="btn-plum" style={{ width: 'auto', padding: '0 20px', fontSize: 13 }} onClick={() => nav('create-task')}>+ New Task</button>
+            </div>
+          </div>
+        )}
+      </div>
+      <BottomNav active="home" onNav={id => { if(id==='tasks') nav('create-task'); if(id==='profile') nav('hirer-home'); }} />
+    </div>
+  );
+};
+
+// ── CREATE TASK ──
+const CreateTaskScreen = ({ nav }) => {
+  const [serviceType, setServiceType] = useState('Cleaning');
+  const [mode, setMode] = useState('rush');
+  const [areas, setAreas] = useState(['Living Room']);
+  const services = ['Laundry','Grocery','Cleaning','Dishwashing'];
+  const allAreas = ['Deep Cleaning','Bathroom','Bedroom','Living Room','Kitchen','Garden'];
+  const toggleArea = a => setAreas(p => p.includes(a) ? p.filter(x=>x!==a) : [...p,a]);
+  return (
+    <div className="screen" style={{ background: C.bg, display: 'flex', flexDirection: 'column' }}>
+      <StatusBar light />
+      <BackHeader title="Create Task" onBack={() => nav('hirer-home')} light />
+      <div style={{ flex: 1, overflow: 'auto', padding: '20px 28px 120px' }}>
+        <h3 style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:22, letterSpacing:'-0.9px', color:C.textDark, marginBottom:16 }}>What do you need help with?</h3>
+        {/* Service type */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:12, letterSpacing:'1.8px', color:C.textDark, marginBottom:10 }}>SERVICE TYPE</div>
+          <div style={{ display:'flex', gap:8 }}>
+            {services.map(s => (
+              <button key={s} onClick={()=>setServiceType(s)} style={{ flex:1, height:70, borderRadius:16, background: serviceType===s ? C.orange : '#fff', border:'none', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', transition:'all 0.15s' }}>
+                <span style={{ fontSize:18 }}>{s==='Laundry'?'🧺':s==='Grocery'?'🛒':s==='Cleaning'?'🧹':'🍽️'}</span>
+                <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:10, letterSpacing:'0.5px', color: serviceType===s ? '#fff' : C.textDark }}>{s}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Notes */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:12, letterSpacing:'1.8px', color:C.textDark, marginBottom:8 }}>NOTES</div>
+          <div style={{ background:'#fff', borderRadius:12, padding:'12px 16px', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
+            <input style={{ width:'100%', border:'none', outline:'none', fontFamily:'Public Sans', fontSize:12, color:C.plum }} placeholder="Add specific details or instructions..." />
+          </div>
+        </div>
+        {/* Areas */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:12, letterSpacing:'1.8px', color:C.textDark, marginBottom:8 }}>SELECT AREAS</div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+            {allAreas.map(a => (
+              <button key={a} onClick={()=>toggleArea(a)} style={{ padding:'6px 14px', borderRadius:20, border: areas.includes(a)?`1.5px solid ${C.orange}`:'1.5px solid rgba(190,200,209,0.5)', background: areas.includes(a)?C.orangeLight:'#fff', fontFamily:'Public Sans', fontWeight:700, fontSize:12, color: areas.includes(a)?C.orange:C.textDark, cursor:'pointer', transition:'all 0.15s' }}>{a}</button>
+            ))}
+          </div>
+        </div>
+        {/* Complexity */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:12, letterSpacing:'1.8px', color:C.textDark, marginBottom:8 }}>TASK COMPLEXITY</div>
+          <div style={{ display:'flex', gap:8 }}>
+            {['Light','Moderate','Heavy'].map(c=>(
+              <button key={c} style={{ flex:1, padding:'8px', borderRadius:20, border:'1.5px solid rgba(190,200,209,0.5)', background:'#fff', fontFamily:'Public Sans', fontWeight:700, fontSize:12, color:C.textDark, cursor:'pointer' }}>{c}</button>
+            ))}
+          </div>
+        </div>
+        {/* Mode */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:12, letterSpacing:'1.8px', color:C.textDark, marginBottom:8 }}>SERVICE MODE</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {[{id:'rush',label:'RUSH',fee:'₱50',desc:'Priority dispatch. Worker notified immediately.', bg:C.orangeLight, border:C.orange},{id:'standard',label:'Standard',fee:'₱0',desc:'Post to community board. Best for non-urgent chores.',bg:'#fff',border:C.plum}].map(m=>(
+              <button key={m.id} onClick={()=>setMode(m.id)} style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', borderRadius:16, background:m.bg, border:`${mode===m.id?'2':'1'}px solid ${m.border}`, cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                <div style={{ width:48, height:48, borderRadius:999, border:`6px solid ${m.border}`, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {mode===m.id && <div style={{ width:24, height:24, borderRadius:'50%', background:m.border }} />}
+                </div>
+                <div>
+                  <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:14, color:C.plum }}>{m.label} <span style={{ color:C.orange }}>{m.fee}</span></div>
+                  <div style={{ fontFamily:'Public Sans', fontSize:11, color:C.textDark, opacity:0.7, lineHeight:'16px', marginTop:2 }}>{m.desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Total */}
+        <div style={{ borderTop:'1px solid rgba(178,178,178,0.4)', paddingTop:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:15, color:C.plum }}>Total Payment</span>
+          <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:18, color:C.orange }}>{mode==='rush'?'₱230':'₱180'}</span>
+        </div>
+      </div>
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'16px 28px 32px', background:'linear-gradient(to top, #faf5ff 80%, transparent)' }}>
+        <button className="btn-plum" onClick={() => nav('hirer-home')}>Publish Request</button>
+      </div>
+    </div>
+  );
+};
+
+// ── WORKER HOME (PROFILE) ──
+const WorkerHomeScreen = ({ nav }) => {
+  const [online, setOnline] = useState(true);
+  return (
+    <div className="screen" style={{ background: C.bg, display: 'flex', flexDirection: 'column' }}>
+      <StatusBar />
+      <AppHeader onNotif={() => {}} />
+      <div style={{ flex: 1, overflow: 'auto', padding: '16px 24px 100px' }}>
+        {/* Profile card */}
+        <div style={{ background:'#fff', borderRadius:20, padding:'20px', marginBottom:16, boxShadow:'0 2px 12px rgba(0,0,0,0.06)', position:'relative' }}>
+          <button style={{ position:'absolute', top:16, right:16, background:'none', border:'none', cursor:'pointer' }}>
+            <Icon name="edit" size={20} color={C.plum} />
+          </button>
+          <div style={{ display:'flex', gap:16, alignItems:'center', marginBottom:14 }}>
+            <div style={{ width:80, height:80, borderRadius:'50%', background:'linear-gradient(135deg,#d4a5a5,#c07070)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:32 }}>👤</div>
+            <div>
+              <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:16, color:C.plum }}>Juan Zamora</div>
+              <div style={{ fontFamily:'Public Sans', fontSize:11, color:C.orange, marginBottom:6 }}>Prk. 7, Brgy. Sto. Niño, Panabo City</div>
+              <div style={{ background:C.greenLight, borderRadius:999, padding:'3px 10px', display:'inline-block' }}>
+                <span style={{ fontFamily:'Public Sans', fontSize:9, color:C.green }}>✓ Verified Kabayan</span>
+              </div>
+            </div>
+          </div>
+          {/* Online toggle */}
+          <div style={{ background:'#fff', borderRadius:30, boxShadow:'0 1px 4px rgba(0,0,0,0.12)', padding:'12px 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:18, color: online ? C.orange : 'rgb(190,200,209)' }}>{online?'ONLINE':'OFFLINE'}</span>
+            <button onClick={()=>setOnline(p=>!p)} style={{ width:56, height:28, borderRadius:14, background: online ? C.orange : 'rgb(190,200,209)', border:'none', cursor:'pointer', position:'relative', transition:'background 0.3s' }}>
+              <div style={{ position:'absolute', top:3, left: online?28:3, width:22, height:22, borderRadius:'50%', background:C.bg, boxShadow:'0 1px 3px rgba(0,0,0,0.2)', transition:'left 0.3s' }} />
+            </button>
+          </div>
+        </div>
+        {/* Stats */}
+        <div style={{ background:'#fff', borderRadius:16, padding:'16px 20px', marginBottom:16, boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
+          <div style={{ display:'flex', justifyContent:'space-around' }}>
+            {[{label:'Trust Score',val:'67'},{label:'Neighbors\nAssisted',val:'30'},{label:'Rating',val:'★ 4.8'}].map(s=>(
+              <div key={s.label} style={{ textAlign:'center' }}>
+                <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:22, color:C.plum }}>{s.val}</div>
+                <div style={{ fontFamily:'Public Sans', fontWeight:500, fontSize:10, color:C.textDark, opacity:0.5, whiteSpace:'pre-line', lineHeight:'14px' }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Wallet */}
+        <div style={{ background:'linear-gradient(135deg, #911b44, #5c0c24)', borderRadius:20, padding:'20px', marginBottom:16, color:'#fff' }}>
+          <div style={{ fontFamily:'Public Sans', fontWeight:500, fontSize:12, opacity:0.7, marginBottom:6 }}>Ka-Bayan Wallet</div>
+          <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:30, marginBottom:4 }}>₱ 342.50</div>
+          <div style={{ fontFamily:'Public Sans', fontSize:11, opacity:0.6 }}>Min. balance ₱30 required • Trust Bond Active</div>
+        </div>
+        {/* Task availability notice */}
+        {online && (
+          <div style={{ background:C.orangeLight, borderRadius:16, padding:'16px', border:`1px solid ${C.orange}`, cursor:'pointer' }} onClick={() => nav('task-available')}>
+            <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:14, color:C.orange, marginBottom:4 }}>🔔 New Task Available!</div>
+            <div style={{ fontFamily:'Public Sans', fontSize:12, color:C.orange }}>House Cleaning • 0.6km • ₱207.00 — Tap to view</div>
+          </div>
+        )}
+      </div>
+      <BottomNav active="profile" onNav={id => { if(id==='tasks') nav('task-available'); }} />
+    </div>
+  );
+};
+
+// ── TASK AVAILABLE ──
+const TaskAvailableScreen = ({ nav }) => {
+  const [seconds, setSeconds] = useState(15);
+  useEffect(() => {
+    if (seconds <= 0) return;
+    const iv = setInterval(() => setSeconds(p => Math.max(0, p-1)), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const circ = 2 * Math.PI * 90;
+  const offset = circ * (1 - seconds/15);
+  return (
+    <div className="screen" style={{ background: C.bg, display: 'flex', flexDirection: 'column' }}>
+      <StatusBar />
+      <div style={{ display:'flex', alignItems:'center', padding:'8px 20px', marginBottom:4 }}>
+        <button onClick={() => nav('worker-home')} style={{ background:'none', border:'none', cursor:'pointer' }}>
+          <Icon name="back" size={18} color={C.plum} />
+        </button>
+        <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:18, color:C.plum, marginLeft:12 }}>Help a Ka-Bayan Nearby</span>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'20px 28px 0' }}>
+        {/* Countdown ring */}
+        <div style={{ position:'relative', width:200, height:200, marginBottom:20 }}>
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="90" stroke="rgba(236,89,20,0.18)" strokeWidth="28" fill="none"/>
+            <circle cx="100" cy="100" r="90" stroke={C.orange} strokeWidth="28" fill="none"
+              strokeDasharray={circ} strokeDashoffset={offset}
+              strokeLinecap="round"
+              style={{ transform:'rotate(-90deg)', transformOrigin:'100px 100px', transition:'stroke-dashoffset 1s linear' }}
+            />
+          </svg>
+          <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+            <span style={{ fontFamily:'Nunito, Public Sans', fontWeight:900, fontSize:64, color:C.plum, lineHeight:1 }}>{seconds}</span>
+            <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:18, color:C.plum, letterSpacing:'-0.9px' }}>seconds</span>
+          </div>
+        </div>
+        <h2 style={{ fontFamily:'Public Sans', fontSize:28, textAlign:'center', lineHeight:'38px', letterSpacing:'-0.9px', color:C.plum, marginBottom:24 }}>CLEANING WORK<br/>AVAILABLE</h2>
+        {/* Task details */}
+        <div style={{ width:'100%', background:'#fff', borderRadius:20, padding:'16px', boxShadow:'0 2px 16px rgba(0,0,0,0.06)', marginBottom:20 }}>
+          {[['Service Category','House Cleaning: Living Room'],['Complexity','Moderate'],['Distance','0.6km'],['Total Payout','₱207.00']].map(([k,v],i,a)=>(
+            <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom: i<a.length-1?'1px solid rgba(178,178,178,0.2)':'none' }}>
+              <span style={{ fontFamily:'Public Sans', fontWeight:500, fontSize:13, color:C.textDark, opacity:0.6 }}>{k}</span>
+              <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:13, color:C.plum }}>{v}</span>
+            </div>
+          ))}
+        </div>
+        <button className="btn-plum" style={{ width:'100%', marginBottom:12 }} onClick={() => nav('evidence-log')}>Accept Task</button>
+        <button style={{ background:'none', border:'none', cursor:'pointer', fontFamily:'Public Sans', fontWeight:700, fontSize:15, color:C.plum }} onClick={() => nav('worker-home')}>Pass</button>
+      </div>
+    </div>
+  );
+};
+
+// ── EVIDENCE LOG (CAMERA) ──
+const EvidenceLogScreen = ({ nav }) => {
+  const [progress, setProgress] = useState(100);
+  const [flash, setFlash] = useState(false);
+  const [captured, setCaptured] = useState(false);
+  const handleCapture = () => {
+    setFlash(true);
+    setTimeout(() => { setFlash(false); setCaptured(true); }, 300);
+  };
+  return (
+    <div className="screen" style={{ background: '#000', display: 'flex', flexDirection: 'column' }}>
+      <StatusBar light />
+      <BackHeader title="Evidence Log" onBack={() => nav('task-available')} light
+        rightEl={<div style={{ background:C.greenLight, borderRadius:999, padding:'4px 12px', display:'flex', alignItems:'center', gap:6 }}>
+          <svg width="13" height="12" viewBox="0 0 13 12" fill={C.green}><path d="M6.5 0L8.2 4.4H13L9.4 7.1L10.7 11.5L6.5 8.8L2.3 11.5L3.6 7.1L0 4.4H4.8Z"/></svg>
+          <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:10, letterSpacing:1, color:C.green }}>Secure</span>
+        </div>}
+      />
+      {/* Camera view */}
+      <div style={{ flex:1, position:'relative', overflow:'hidden', background:'#0d0d0d' }}>
+        {/* Simulated camera feed */}
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(160deg,#1a1a2e,#0d0d0d,#1a0f14)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          {captured
+            ? <div style={{ textAlign:'center', animation:'fadeIn 0.3s ease' }}>
+                <div style={{ fontSize:60, marginBottom:12 }}>🧹</div>
+                <div style={{ fontFamily:'Public Sans', fontWeight:500, fontSize:12, color:'rgba(250,245,255,0.5)', letterSpacing:1 }}>PHOTO CAPTURED</div>
+              </div>
+            : <div style={{ color:'rgba(255,255,255,0.1)', fontFamily:'monospace', fontSize:11, textAlign:'center' }}>
+                <div style={{ fontSize:40, marginBottom:8, opacity:0.3 }}>📷</div>
+                <div>live camera feed</div>
+                <div>GPS: 7.3051 N, 125.6792 E</div>
+              </div>
+          }
+        </div>
+        {/* GPS watermark */}
+        <div style={{ position:'absolute', top:12, left:60, right:60, textAlign:'center' }}>
+          <span style={{ fontFamily:'Public Sans', fontWeight:500, fontSize:10, letterSpacing:0.5, color:'rgba(250,245,255,0.7)' }}>SAHUR SUBD. BRGY. STO. NIÑO | 04.07.26 | 10:15</span>
+        </div>
+        {/* Flash overlay */}
+        {flash && <div style={{ position:'absolute', inset:0, background:'#fff', opacity:0.9 }} />}
+        {/* Verification card */}
+        <div style={{ position:'absolute', bottom:120, left:20, right:20, background:'rgba(255,255,255,0.88)', backdropFilter:'blur(24px)', borderRadius:16, padding:'14px 16px' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+            <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:12, letterSpacing:0.8, color:C.plum }}>Verifying...</span>
+            <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:12, color:C.plum }}>100%</span>
+          </div>
+          <div style={{ height:8, borderRadius:999, background:C.bg, overflow:'hidden', marginBottom:10 }}>
+            <div style={{ height:'100%', width:`${progress}%`, borderRadius:999, background:`linear-gradient(90deg, ${C.plumDeep}, rgb(252,110,98))` }} />
+          </div>
+          <div style={{ display:'flex', gap:20, justifyContent:'center' }}>
+            {['Visual\nAuthenticity','Location\nAccuracy','Digital Proof\nSecured'].map(l=>(
+              <div key={l} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:'#22c55e' }} />
+                <span style={{ fontFamily:'Public Sans', fontSize:9, color:C.textDark, whiteSpace:'pre', lineHeight:'13px' }}>{l}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Camera controls */}
+        <div style={{ position:'absolute', bottom:20, left:0, right:0, display:'flex', alignItems:'center', justifyContent:'center', gap:40 }}>
+          <button style={{ width:44, height:44, borderRadius:'50%', background:'rgba(236,89,20,0.3)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <span style={{ fontSize:18 }}>⚡</span>
+          </button>
+          <button onClick={handleCapture} style={{ width:68, height:68, borderRadius:'50%', background:C.plum, border:'4px solid rgba(145,27,68,0.4)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <div style={{ width:50, height:50, borderRadius:'50%', background:C.plum }} />
+          </button>
+          <button style={{ width:44, height:44, borderRadius:'50%', background:'rgba(236,89,20,0.3)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <span style={{ fontSize:16 }}>🔄</span>
+          </button>
+        </div>
+      </div>
+      <div style={{ padding:'12px 28px 24px', background:'#000' }}>
+        <button className="btn-plum" onClick={() => nav('completion-summary')}>Request Client Verification</button>
+      </div>
+    </div>
+  );
+};
+
+// ── COMPLETION SUMMARY ──
+const CompletionSummaryScreen = ({ nav }) => (
+  <div className="screen" style={{ background: C.bg, display: 'flex', flexDirection: 'column' }}>
+    <StatusBar light />
+    <BackHeader title="Completion Summary" onBack={() => nav('evidence-log')} light />
+    <div style={{ flex:1, overflow:'auto', padding:'0 0 160px' }}>
+      {/* Worker info */}
+      <div style={{ display:'flex', alignItems:'center', padding:'16px 24px', gap:14 }}>
+        <div style={{ width:56, height:56, borderRadius:'50%', background:'linear-gradient(135deg,#d4a5a5,#c07070)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24 }}>👤</div>
+        <div>
+          <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:20, letterSpacing:'-0.9px', color:C.plum }}>TASK COMPLETED!</div>
+          <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:15, color:C.orange }}>Please Verify the details below</div>
+        </div>
+      </div>
+      {/* Before/After photos */}
+      <div style={{ background:'#fff', borderRadius:16, margin:'0 16px 16px', padding:'16px' }}>
+        <div style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:20, letterSpacing:'-0.9px', color:C.textDark, marginBottom:12 }}>Task Logs</div>
+        <div style={{ display:'flex', gap:8 }}>
+          {['BEFORE','AFTER'].map(label=>(
+            <div key={label} style={{ flex:1, height:160, borderRadius:10, background:'linear-gradient(135deg,#2d1923,#5c0c24)', overflow:'hidden', position:'relative', display:'flex', alignItems:'flex-end', justifyContent:'center', padding:8 }}>
+              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', opacity:0.3 }}>
+                <span style={{ fontSize:40 }}>{label==='BEFORE'?'🏠':'✨'}</span>
+              </div>
+              <span style={{ fontFamily:'Public Sans', fontSize:13, color:C.orangeLight, letterSpacing:'-0.9px', position:'relative' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Task details */}
+      <div style={{ background:'#fff', borderRadius:16, margin:'0 16px', padding:'16px' }}>
+        {[['Service Category','House Cleaning'],['Geo-Coordinate','7.3051 N, 125.6792 E'],['Authentication','100% Secure & Matched'],['Labor Duration','1h 15m (09:00 - 10:15)']].map(([k,v],i,a)=>(
+          <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom: i<a.length-1?'1px solid rgba(178,178,178,0.2)':'none' }}>
+            <span style={{ fontFamily:'Public Sans', fontWeight:500, fontSize:12, color:C.textDark, opacity:0.5 }}>{k}</span>
+            <span style={{ fontFamily:'Public Sans', fontWeight:700, fontSize:12, color:C.plum }}>{v}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'0 28px 32px', background:`linear-gradient(to top, ${C.bg} 80%, transparent)` }}>
+      <p style={{ fontFamily:'Public Sans', fontWeight:500, fontSize:11, color:C.plum, letterSpacing:'-0.9px', textAlign:'center', marginBottom:10 }}>*By continuing, you confirm that the cleaning task is complete.</p>
+      <button className="btn-plum" style={{ marginBottom:10 }} onClick={() => nav('worker-home')}>Proceed To Payment</button>
+      <button className="btn-ghost">Report a Problem</button>
+    </div>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════
+const SCREENS = {
+  welcome: WelcomeScreen,
+  signup: SignUpScreen,
+  signin: SignInScreen,
+  'id-select': IDSelectScreen,
+  'id-scan': IDScanScreen,
+  'id-review': IDReviewScreen,
+  'face-scan': FaceScanScreen,
+  'verify-success': VerifySuccessScreen,
+  'hirer-home': HirerHomeScreen,
+  'create-task': CreateTaskScreen,
+  'worker-home': WorkerHomeScreen,
+  'task-available': TaskAvailableScreen,
+  'evidence-log': EvidenceLogScreen,
+  'completion-summary': CompletionSummaryScreen,
+};
+
+function App() {
+  const [screen, setScreen] = useState('welcome');
+  const nav = useCallback((s) => setScreen(s), []);
+  const Screen = SCREENS[screen] || WelcomeScreen;
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', minHeight:'100vh', padding:'24px 16px', gap:20 }}>
+      {/* Nav hint chips */}
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'center', maxWidth:520 }}>
+        {[['welcome','🏠 Welcome'],['signin','🔑 Sign In'],['signup','📝 Sign Up'],['id-select','🪪 ID Select'],['id-scan','📷 ID Scan'],['id-review','✅ ID Review'],['face-scan','👤 Face Scan'],['verify-success','🎉 Verified'],['hirer-home','🗺️ Hirer Home'],['create-task','📋 Create Task'],['worker-home','👷 Worker Home'],['task-available','📢 Task Alert'],['evidence-log','📸 Evidence'],['completion-summary','🏁 Complete']].map(([id,label]) => (
+          <button key={id} onClick={() => nav(id)} style={{ padding:'5px 10px', borderRadius:20, background: screen===id ? C.plum : 'rgba(255,255,255,0.1)', border: screen===id ? 'none' : '1px solid rgba(255,255,255,0.15)', color: screen===id ? '#fff' : 'rgba(255,255,255,0.6)', fontFamily:'Public Sans', fontWeight:600, fontSize:11, cursor:'pointer', transition:'all 0.15s', whiteSpace:'nowrap' }}>{label}</button>
+        ))}
+      </div>
+      <div className="phone-shell">
+        <Screen nav={nav} />
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -10,6 +10,8 @@ dependencies:
   shelf_cors_headers: ^0.1.5
   http: ^1.2.2
   dotenv: ^4.2.0
+  googleapis: ^14.0.0
+  googleapis_auth: ^2.0.0
 
 dev_dependencies:
   lints: ^6.0.0

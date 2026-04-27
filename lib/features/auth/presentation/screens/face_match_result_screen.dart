@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:kbsync/core/routing/app_routes.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
+import 'package:kbsync/features/auth/data/reference_face_service.dart';
 import 'package:kbsync/features/auth/data/verification_api_service.dart';
 
 enum _MatchStage { verifying, success, failed }
@@ -28,6 +29,7 @@ class _FaceMatchResultScreenState extends State<FaceMatchResultScreen>
   with TickerProviderStateMixin {
   final VerificationApiService _verificationApiService = VerificationApiService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ReferenceFaceService _referenceFaceService = ReferenceFaceService();
 
   late final AnimationController _checkController;
   late final Animation<double> _checkScale;
@@ -107,6 +109,19 @@ class _FaceMatchResultScreenState extends State<FaceMatchResultScreen>
           'isVerified': true,
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
+
+        // Upload the just-verified selfie as the reference face used by
+        // entrance/exit task scans. A failure here doesn't block sign-up —
+        // the user can re-capture later — but we surface it in the score line.
+        try {
+          await _referenceFaceService.uploadFromFile(
+            uid: userId,
+            filePath: widget.userImagePath,
+          );
+        } catch (_) {
+          // Swallow: the verification still succeeded. Phase 4 will add a
+          // backfill prompt for users without a stored reference face.
+        }
       }
 
       await Future<void>.delayed(const Duration(milliseconds: 380));

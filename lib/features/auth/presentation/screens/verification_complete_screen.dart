@@ -43,7 +43,8 @@ class VerificationCompleteScreen extends StatefulWidget {
 
 class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
     with WidgetsBindingObserver {
-  final VerificationApiService _verificationApiService = VerificationApiService();
+  final VerificationApiService _verificationApiService =
+      VerificationApiService();
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
       performanceMode: FaceDetectorMode.fast,
@@ -173,9 +174,10 @@ class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
 
     final rotation =
         InputImageRotationValue.fromRawValue(description.sensorOrientation) ??
-            InputImageRotation.rotation0deg;
+        InputImageRotation.rotation0deg;
 
-    final format = InputImageFormatValue.fromRawValue(image.format.raw) ??
+    final format =
+        InputImageFormatValue.fromRawValue(image.format.raw) ??
         InputImageFormat.nv21;
 
     final metadata = InputImageMetadata(
@@ -205,10 +207,11 @@ class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
     final buttonText = _isSubmittingLiveness
         ? 'Verifying...'
         : _isFaceDetected
-            ? widget.detectedLabel
-            : widget.notDetectedLabel;
-    final buttonColor =
-        _isFaceDetected ? AppColors.orange : const Color(0xFF8D6E80);
+        ? widget.detectedLabel
+        : widget.notDetectedLabel;
+    final buttonColor = _isFaceDetected
+        ? AppColors.orange
+        : const Color(0xFF8D6E80);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -261,9 +264,7 @@ class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
                     const SizedBox(
                       width: 212,
                       height: 274,
-                      child: CustomPaint(
-                        painter: _DashedOvalPainter(),
-                      ),
+                      child: CustomPaint(painter: _DashedOvalPainter()),
                     ),
                   ],
                 ),
@@ -328,7 +329,9 @@ class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
       }
 
       final picture = await controller.takePicture();
-      final userId = widget.passiveLivenessUserId ?? FirebaseAuth.instance.currentUser?.uid;
+      final userId =
+          widget.passiveLivenessUserId ??
+          FirebaseAuth.instance.currentUser?.uid;
       if (userId == null || userId.trim().isEmpty) {
         throw Exception('No authenticated user found for liveness validation.');
       }
@@ -336,7 +339,8 @@ class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
       final result = await _verificationApiService.verifyPassiveLiveness(
         userId: userId,
         userImagePath: picture.path,
-        faceLivenessScoreDeclineThreshold: widget.faceLivenessScoreDeclineThreshold,
+        faceLivenessScoreDeclineThreshold:
+            widget.faceLivenessScoreDeclineThreshold,
         rotateImage: widget.rotateImageForLiveness,
       );
 
@@ -359,11 +363,12 @@ class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Passive liveness failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Passive liveness failed: $e')));
     } finally {
-      if (controller.value.isInitialized && !controller.value.isStreamingImages) {
+      if (controller.value.isInitialized &&
+          !controller.value.isStreamingImages) {
         await controller.startImageStream(_processCameraImage);
       }
       if (mounted) {
@@ -399,7 +404,9 @@ class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
       );
     }
 
-    if (_isInitializing || controller == null || !controller.value.isInitialized) {
+    if (_isInitializing ||
+        controller == null ||
+        !controller.value.isInitialized) {
       return const ColoredBox(
         color: Color(0xFFE9D9E2),
         child: Center(
@@ -420,16 +427,12 @@ class _VerificationCompleteScreenState extends State<VerificationCompleteScreen>
       return const ColoredBox(color: Color(0xFFE9D9E2));
     }
 
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0),
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: previewSize.height,
-          height: previewSize.width,
-          child: CameraPreview(controller),
-        ),
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: previewSize.height,
+        height: previewSize.width,
+        child: CameraPreview(controller),
       ),
     );
   }

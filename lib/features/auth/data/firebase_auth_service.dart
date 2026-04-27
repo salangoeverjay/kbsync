@@ -77,6 +77,27 @@ class FirebaseAuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  Future<String?> getCurrentUserFullName() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    final displayName = user.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName;
+    }
+
+    final snapshot = await _firestore.collection('users').doc(user.uid).get();
+    final data = snapshot.data();
+    if (data == null) return null;
+
+    final fullName = data['fullName'] as String?;
+    if (fullName != null && fullName.trim().isNotEmpty) {
+      return fullName.trim();
+    }
+
+    return null;
+  }
+
   Future<void> updateVerificationStatus({
     required String uid,
     required String verificationStatus,
@@ -88,7 +109,9 @@ class FirebaseAuthService {
     }, SetOptions(merge: true));
   }
 
-  Future<UserVerificationState?> getVerificationState({required String uid}) async {
+  Future<UserVerificationState?> getVerificationState({
+    required String uid,
+  }) async {
     final snapshot = await _firestore.collection('users').doc(uid).get();
     final data = snapshot.data();
     if (data == null) return null;
@@ -96,7 +119,8 @@ class FirebaseAuthService {
     return UserVerificationState(
       uid: uid,
       role: data['role'] as String?,
-      verificationStatus: (data['verificationStatus'] as String?) ??
+      verificationStatus:
+          (data['verificationStatus'] as String?) ??
           ((data['isVerified'] == true) ? 'approved' : 'pending'),
     );
   }

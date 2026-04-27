@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>KA-BAYAN SYNC v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0e0810;display:flex;align-items:center;justify-content:center;font-family:'Public Sans',sans-serif}
+#root{display:flex;flex-direction:column;align-items:center;min-height:100vh;width:100%;padding:20px 16px 32px;gap:16px}
+
+/* ── PHONE ── */
+.phone{width:390px;height:844px;border-radius:52px;overflow:hidden;position:relative;background:#faf5ff;
+  box-shadow:0 0 0 11px #1c1218,0 0 0 13px #2d1923,0 40px 100px rgba(0,0,0,0.7);flex-shrink:0}
+.screen{position:absolute;inset:0;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── ANIM ── */
+@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes slideInLeft{from{transform:translateX(-30px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fadeUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}
+@keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(2.4);opacity:0}}
+@keyframes scan{0%,100%{top:5%}50%{top:88%}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shimmer{0%{background-position:-300px 0}100%{background-position:300px 0}}
+@keyframes countRing{from{stroke-dashoffset:0}to{stroke-dashoffset:565}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(236,89,20,0.3)}50%{box-shadow:0 0 40px rgba(236,89,20,0.6)}}
+
+.ani-slide{animation:slideInRight .3s cubic-bezier(.4,0,.2,1)}
+.ani-up{animation:fadeUp .35s cubic-bezier(.4,0,.2,1)}
+
+/* ── SCROLLBAR ── */
+.scrollable{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scrollable::-webkit-scrollbar{display:none}
+
+/* ── STATUS BAR ── */
+.sbar{height:48px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 8px;flex-shrink:0;font-size:12px;font-weight:700;letter-spacing:.3px}
+.sbar .notch{position:absolute;left:50%;transform:translateX(-50%);top:12px;width:126px;height:36px;border-radius:18px;background:inherit}
+
+/* ── BUTTONS ── */
+.btn{border:none;border-radius:14px;height:52px;width:100%;font-family:'Public Sans',sans-serif;font-weight:700;font-size:15px;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.1px}
+.btn:active{transform:scale(.97);filter:brightness(.9)}
+.btn-plum{background:#911b44;color:#fff}
+.btn-orange{background:#ec5914;color:#fff}
+.btn-gradient{background:linear-gradient(135deg,#911b44,#ec5914);color:#fff;box-shadow:0 4px 20px rgba(145,27,68,.35)}
+.btn-ghost{background:transparent;color:#911b44;border:1.5px solid rgba(145,27,68,.25)}
+.btn-white{background:#fff;color:#911b44;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.btn-sm{height:38px;border-radius:10px;font-size:13px;width:auto;padding:0 18px}
+.btn-pill{height:34px;border-radius:999px;font-size:12px;width:auto;padding:0 16px}
+
+/* ── INPUTS ── */
+.inp{width:100%;height:54px;border-radius:14px;border:1.5px solid rgba(145,27,68,.15);background:#fff;padding:0 16px;font-family:'Public Sans',sans-serif;font-size:14px;color:#2d1923;outline:none;transition:border-color .2s}
+.inp:focus{border-color:#911b44}
+.inp::placeholder{color:rgba(145,27,68,.3);font-weight:500}
+.inp-label{font-size:11px;font-weight:700;letter-spacing:1.4px;color:#911b44;margin-bottom:7px;display:block;text-transform:uppercase}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:22px;box-shadow:0 2px 20px rgba(0,0,0,.06)}
+.card-glass{background:rgba(255,255,255,.85);backdrop-filter:blur(20px);border-radius:22px;border:1px solid rgba(255,255,255,.6);box-shadow:0 4px 24px rgba(0,0,0,.08)}
+
+/* ── NAV ── */
+.bnav{position:absolute;bottom:0;left:0;right:0;height:84px;background:rgba(250,245,255,.96);backdrop-filter:blur(24px);border-top:1px solid rgba(145,27,68,.06);border-radius:0 0 52px 52px;display:flex;align-items:center;justify-content:space-around;padding:0 8px 16px;flex-shrink:0}
+.nitem{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:8px 14px;border-radius:14px;transition:all .18s;border:none;background:none}
+.nitem.on{background:rgba(145,27,68,.09)}
+.nitem svg{transition:all .18s}
+.nlabel{font-size:10px;font-weight:700;letter-spacing:.5px;color:#bec8d1;transition:color .18s}
+.nlabel.on{color:#911b44}
+
+/* ── CHIPS ── */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;font-family:'Public Sans',sans-serif;font-weight:700;font-size:10px;letter-spacing:.8px}
+.chip-green{background:rgba(175,228,220,.4);color:#006c4f}
+.chip-orange{background:rgba(236,89,20,.1);color:#ec5914}
+.chip-plum{background:rgba(145,27,68,.1);color:#911b44}
+
+/* ── NAV SCREEN PICKER ── */
+.picker{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:500px}
+.pick-btn{padding:5px 11px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);font-family:'Public Sans',sans-serif;font-weight:600;font-size:10px;cursor:pointer;transition:all .15s;letter-spacing:.3px;white-space:nowrap}
+.pick-btn.active{background:#911b44;border-color:#911b44;color:#fff}
+
+/* ── METRIC CARD ── */
+.metric{background:#fff;border-radius:18px;padding:16px;box-shadow:0 2px 16px rgba(0,0,0,.06);display:flex;flex-direction:column;gap:6px}
+.metric-val{font-family:'Public Sans',sans-serif;font-weight:800;font-size:24px;color:#911b44}
+.metric-label{font-size:11px;font-weight:600;color:rgba(45,25,35,.5);letter-spacing:.3px}
+
+/* ── SECTION HEADER ── */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-family:'Public Sans',sans-serif;font-weight:800;font-size:15px;color:#2d1923;letter-spacing:-.3px}
+.sec-link{font-size:12px;font-weight:700;color:#ec5914;cursor:pointer;background:none;border:none;font-family:'Public Sans',sans-serif}
+
+/* ── TASK ROW ── */
+.task-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+.task-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justif-content:center;flex-shrink:0;font-size:18px;align-items:center;justify-content:center}
+
+/* Progress ring util */
+.ring-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
+
+/* ─── TOKENS ─── */
+const T={
+  plum:'#911b44',plumDk:'#3c1226',plumDeep:'#7c012d',
+  orange:'#ec5914',orangeLt:'#ffe7db',
+  bg:'#faf5ff',white:'#fff',
+  dark:'#2d1923',mid:'rgba(45,25,35,.5)',muted:'rgba(45,25,35,.3)',
+  green:'#006c4f',greenLt:'#afe4dc',
+  border:'rgba(145,27,68,.1)',
+  grad:'linear-gradient(135deg,#911b44,#ec5914)',
+  gradSoft:'linear-gradient(135deg,rgba(145,27,68,.08),rgba(236,89,20,.06))',
+};
+
+/* ─── SVG ICONS ─── */
+const Ico=({n,s=20,c=T.plum,style:st={}})=>{
+  const v={
+    back:<path d="M10 4L4 10l6 6" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+    menu:<><line x1="3" y1="6" x2="17" y2="6" stroke={c} strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="11" x2="17" y2="11" stroke={c} strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="16" x2="12" y2="16" stroke={c} strokeWidth="2" strokeLinecap="round"/></>,
+    bell:<><path d="M18 16H6l2-4V8a4 4 0 118 0v4l2 4z" stroke={c} strokeWidth="1.5" fill="none"/><path d="M10 20a2 2 0 004 0" stroke={c} strokeWidth="1.5" fill="none"/></>,
+    home:<><path d="M3 11l9-9 9 9" stroke={c} strokeWidth="1.8" strokeLinecap="round" fill="none"/><path d="M5 9v10a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V9" stroke={c} strokeWidth="1.8" strokeLinecap="round" fill="none"/></>,
+    tasks:<><rect x="3" y="3" width="7" height="7" rx="1.5" stroke={c} strokeWidth="1.8" fill="none"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke={c} strokeWidth="1.8" fill="none"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke={c} strokeWidth="1.8" fill="none"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke={c} strokeWidth="1.8" fill="none"/></>,
+    wallet:<><path d="M2 8a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8z" stroke={c} strokeWidth="1.8" fill="none"/><circle cx="16" cy="13" r="1.5" fill={c}/><path d="M2 11h20" stroke={c} strokeWidth="1.8"/><path d="M6 4l3-2 3 2 3-2" stroke={c} strokeWidth="1.8" strokeLinecap="round" fill="none"/></>,
+    user:<><circle cx="12" cy="8" r="3.5" stroke={c} strokeWidth="1.8" fill="none"/><path d="M4 20c0-3.87 3.58-7 8-7s8 3.13 8 7" stroke={c} strokeWidth="1.8" strokeLinecap="round" fill="none"/></>,
+    star:<path d="M12 2l2.9 6.26L22 9.27l-5 5.14 1.18 7.22L12 18.4l-6.18 3.23L7 14.41 2 9.27l7.1-1.01L12 2z" fill={c}/>,
+    check:<path d="M4 12l5 5L20 7" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+    camera:<><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11z" stroke={c} strokeWidth="1.8" fill="none"/><circle cx="12" cy="13" r="4" stroke={c} strokeWidth="1.8" fill="none"/></>,
+    loc:<><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" stroke={c} strokeWidth="1.8" fill="none"/><circle cx="12" cy="10" r="3" stroke={c} strokeWidth="1.8" fill="none"/></>,
+    shield:<><path d="M12 2l8 4v6c0 5-4 9.4-8 10.3C8 21.4 4 17 4 12V6l8-4z" stroke={c} strokeWidth="1.8" fill="none"/><path d="M9 12l2 2 4-4" stroke={c} strokeWidth="1.8" strokeLinecap="round" fill="none"/></>,
+    flash:<path d="M13 2L3 14h9l-1 8L21 10h-9l1-8z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>,
+    id:<><rect x="2" y="5" width="20" height="14" rx="2" stroke={c} strokeWidth="1.8" fill="none"/><circle cx="8" cy="11" r="2" stroke={c} strokeWidth="1.5" fill="none"/><path d="M13 9h5M13 13h3" stroke={c} strokeWidth="1.5" strokeLinecap="round"/></>,
+    plus:<><line x1="12" y1="5" x2="12" y2="19" stroke={c} strokeWidth="2" strokeLinecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke={c} strokeWidth="2" strokeLinecap="round"/></>,
+    chart:<><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/></>,
+    arrow:<path d="M5 12h14M12 5l7 7-7 7" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+    edit:<><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke={c} strokeWidth="1.8" fill="none" strokeLinecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z" stroke={c} strokeWidth="1.8" fill="none"/></>,
+    gear:<><circle cx="12" cy="12" r="3" stroke={c} strokeWidth="1.8" fill="none"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke={c} strokeWidth="1.8" strokeLinecap="round"/></>,
+  };
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" style={st}>{v[n]}</svg>;
+};
+
+/* ─── STATUS BAR ─── */
+const SBar=({light})=>{
+  const col=light?'#fff':T.dark;
+  return(
+    <div className="sbar" style={{color:col,position:'relative',background:'inherit'}}>
+      <span>9:41</span>
+      <div className="notch" style={{background:light?'rgba(0,0,0,0.5)':'#150810'}}/>
+      <div style={{display:'flex',gap:5,alignItems:'center'}}>
+        <svg width="16" height="11" viewBox="0 0 16 11" fill={col}><rect x="0" y="4" width="3" height="7" rx="1"/><rect x="4.5" y="2" width="3" height="9" rx="1"/><rect x="9" y="0" width="3" height="11" rx="1"/><rect x="13.5" y="1" width="2.5" height="8" rx="1" opacity=".3"/></svg>
+        <svg width="16" height="11" viewBox="0 0 18 12" fill="none"><rect x=".5" y=".5" width="13" height="10" rx="2" stroke={col}/><rect x="2" y="2" width="9" height="7" rx="1" fill={col}/><rect x="14.5" y="3.5" width="2.5" height="4" rx="1" fill={col}/></svg>
+      </div>
+    </div>
+  );
+};
+
+/* ─── BACK HEADER ─── */
+const BackHdr=({title,onBack,light,right})=>(
+  <div style={{height:56,display:'flex',alignItems:'center',padding:'0 20px',gap:14,background:light?T.plum:'transparent',flexShrink:0}}>
+    <button onClick={onBack} style={{width:36,height:36,borderRadius:10,background:light?'rgba(255,255,255,.15)':'rgba(145,27,68,.08)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <Ico n="back" s={16} c={light?'#fff':T.plum}/>
+    </button>
+    <span style={{fontFamily:'Public Sans',fontWeight:800,fontSize:17,color:light?'#fff':T.dark,flex:1,letterSpacing:'-.4px'}}>{title}</span>
+    {right}
+  </div>
+);
+
+/* ─── APP HEADER ─── */
+const AppHdr=({greeting,name,onNotif})=>(
+  <div style={{padding:'8px 24px 12px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+    <div>
+      {greeting&&<div style={{fontSize:12,fontWeight:600,color:T.mid,letterSpacing:.3}}>{greeting}</div>}
+      <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:20,letterSpacing:'-1px',color:T.plum}}>KA-BAYAN SYNC</div>
+    </div>
+    <div style={{display:'flex',gap:10}}>
+      <button onClick={onNotif} style={{width:40,height:40,borderRadius:12,background:T.orangeLt,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <Ico n="bell" s={18} c={T.orange}/>
+      </button>
+    </div>
+  </div>
+);
+
+/* ─── BOTTOM NAV ─── */
+const BNav=({active,onNav})=>{
+  const tabs=[{id:'home',icon:'home',label:'Home'},{id:'tasks',icon:'tasks',label:'Tasks'},{id:'wallet',icon:'wallet',label:'Wallet'},{id:'profile',icon:'user',label:'Profile'}];
+  return(
+    <div className="bnav">
+      {tabs.map(t=>(
+        <button key={t.id} className={`nitem ${active===t.id?'on':''}`} onClick={()=>onNav(t.id)}>
+          <Ico n={t.icon} s={22} c={active===t.id?T.plum:'#bec8d1'}/>
+          <span className={`nlabel ${active===t.id?'on':''}`}>{t.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+/* ─── AVATAR ─── */
+const Avatar=({size=48,seed='J',bg='linear-gradient(135deg,#d4a5a5,#b07070)'})=>(
+  <div style={{width:size,height:size,borderRadius:size*.3,background:bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*.4,fontWeight:800,color:'#fff',fontFamily:'Public Sans',flexShrink:0}}>{seed}</div>
+);
+
+/* ─── PROGRESS RING ─── */
+const Ring=({pct,size=80,stroke=8,c1=T.plum,c2='rgba(145,27,68,.1)',children})=>{
+  const r=(size-stroke*2)/2,circ=2*Math.PI*r,off=circ*(1-pct/100);
+  return(
+    <div className="ring-wrap" style={{width:size,height:size}}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{position:'absolute',top:0,left:0}}>
+        <circle cx={size/2} cy={size/2} r={r} stroke={c2} strokeWidth={stroke} fill="none"/>
+        <circle cx={size/2} cy={size/2} r={r} stroke={c1} strokeWidth={stroke} fill="none"
+          strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round"
+          style={{transform:`rotate(-90deg)`,transformOrigin:`${size/2}px ${size/2}px`,transition:'stroke-dashoffset .6s ease'}}/>
+      </svg>
+      <div style={{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>{children}</div>
+    </div>
+  );
+};
+
+/* ─── TAG ─── */
+const Tag=({c='green',children})=>{
+  const cols={green:{bg:'rgba(175,228,220,.4)',col:'#006c4f'},orange:{bg:'rgba(236,89,20,.12)',col:'#ec5914'},plum:{bg:'rgba(145,27,68,.1)',col:'#911b44'},red:{bg:'rgba(239,68,68,.1)',col:'#dc2626'}};
+  const s=cols[c]||cols.green;
+  return <span className="chip" style={{background:s.bg,color:s.col}}>{children}</span>;
+};
+
+
+/* ══════════════════════════════════════════
+   SCREENS
+══════════════════════════════════════════ */
+
+/* ── WELCOME ── */
+const Welcome=({nav})=>(
+  <div className="screen" style={{background:T.plumDk}}>
+    <div style={{flex:1,position:'relative',overflow:'hidden'}}>
+      {/* bg pattern */}
+      <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 20% 20%,rgba(236,89,20,.25) 0%,transparent 60%), radial-gradient(ellipse at 80% 80%,rgba(145,27,68,.4) 0%,transparent 60%)'}}/>
+      <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:.04}} viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+        {Array.from({length:12}).map((_,i)=><line key={i} x1={i*36} y1="0" x2={i*36} y2="844" stroke="#fff" strokeWidth="1"/>)}
+        {Array.from({length:24}).map((_,i)=><line key={i} x1="0" y1={i*36} x2="390" y2={i*36} stroke="#fff" strokeWidth="1"/>)}
+      </svg>
+      {/* floating orbs */}
+      <div style={{position:'absolute',top:60,right:-30,width:220,height:220,borderRadius:'50%',background:'radial-gradient(circle,rgba(236,89,20,.2),transparent)',animation:'float 4s ease-in-out infinite'}}/>
+      <div style={{position:'absolute',top:160,left:-40,width:160,height:160,borderRadius:'50%',background:'radial-gradient(circle,rgba(145,27,68,.3),transparent)',animation:'float 5s ease-in-out infinite .5s'}}/>
+      {/* logo pill */}
+      <div style={{position:'absolute',top:60,left:32}}>
+        <SBar light/>
+        <div style={{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(255,255,255,.1)',borderRadius:999,padding:'6px 14px 6px 8px',border:'1px solid rgba(255,255,255,.15)'}}>
+          <div style={{width:28,height:28,borderRadius:8,background:T.orange,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <Ico n="shield" s={14} c="#fff"/>
+          </div>
+          <span style={{fontFamily:'Public Sans',fontWeight:800,fontSize:12,color:'rgba(255,255,255,.85)',letterSpacing:'.5px'}}>KA-BAYAN SYNC</span>
+        </div>
+      </div>
+      {/* hero illustration placeholder */}
+      <div style={{position:'absolute',top:130,left:'50%',transform:'translateX(-50%)',width:280,height:280,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{width:220,height:220,borderRadius:'50%',border:'2px solid rgba(236,89,20,.3)',display:'flex',alignItems:'center',justifyContent:'center',animation:'float 3s ease-in-out infinite'}}>
+          <div style={{width:160,height:160,borderRadius:'50%',background:'rgba(236,89,20,.1)',display:'flex',alignItems:'center',justifyContent:'center',border:'2px solid rgba(236,89,20,.2)'}}>
+            <span style={{fontSize:64}}>🏘️</span>
+          </div>
+        </div>
+        {/* orbiting dots */}
+        {[0,60,120,180,240,300].map((deg,i)=>(
+          <div key={i} style={{position:'absolute',width:8,height:8,borderRadius:'50%',background:i%2===0?T.orange:'rgba(255,255,255,.3)',top:`${50+44*Math.sin(deg*Math.PI/180)}%`,left:`${50+44*Math.cos(deg*Math.PI/180)}%`,transform:'translate(-50%,-50%)'}}/>
+        ))}
+      </div>
+      {/* content */}
+      <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'0 32px 44px'}}>
+        <div style={{marginBottom:6}}>
+          <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:12,letterSpacing:'2px',color:T.orange,textTransform:'uppercase'}}>Panabo City, Davao del Norte</span>
+        </div>
+        <h1 style={{fontFamily:'Public Sans',fontWeight:900,fontSize:36,lineHeight:'40px',letterSpacing:'-1.5px',color:'#fff',marginBottom:12}}>
+          Welcome to the<br/><span style={{color:T.orange}}>Neighborhood.</span>
+        </h1>
+        <p style={{fontFamily:'Public Sans',fontWeight:400,fontSize:15,lineHeight:'22px',color:'rgba(255,255,255,.65)',marginBottom:36}}>
+          Connect with verified locals. Offer your skills and build a stronger community together.
+        </p>
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          <button className="btn btn-gradient" onClick={()=>nav('signup')} style={{boxShadow:'0 8px 28px rgba(236,89,20,.4)'}}>Join Ka-Bayan Sync</button>
+          <button className="btn" onClick={()=>nav('signin')} style={{background:'rgba(255,255,255,.1)',color:'#fff',border:'1px solid rgba(255,255,255,.2)'}}>I already have an account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+/* ── SIGN UP ── */
+const SignUp=({nav})=>{
+  const [f,sf]=useState({name:'',email:'',pass:''});
+  return(
+    <div className="screen" style={{background:T.bg}}>
+      <SBar/>
+      <div style={{padding:'8px 24px 0'}}>
+        <BackHdr title="" onBack={()=>nav('welcome')}/>
+        <div style={{marginBottom:6}}>
+          <div style={{fontFamily:'Public Sans',fontWeight:400,fontSize:13,color:T.mid,marginBottom:2}}>Step 1 of 3</div>
+          <h2 style={{fontFamily:'Public Sans',fontWeight:900,fontSize:28,letterSpacing:'-1px',color:T.dark}}>Create your<br/><span style={{color:T.plum}}>account</span></h2>
+        </div>
+        <div style={{display:'flex',gap:4,margin:'16px 0'}}>
+          {[T.orange,'rgba(255,90,0,.2)','rgba(255,90,0,.2)'].map((c,i)=><div key={i} style={{flex:1,height:4,borderRadius:999,background:c}}/>)}
+        </div>
+      </div>
+      <div className="scrollable" style={{flex:1,padding:'4px 24px'}}>
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          {[['name','Full Name','Juan D. Dela Cruz','text'],['email','Email Address','juan@email.com','email'],['pass','Password','••••••••','password']].map(([k,l,ph,t])=>(
+            <div key={k}>
+              <label className="inp-label">{l}</label>
+              <input className="inp" type={t} placeholder={ph} value={f[k]} onChange={e=>sf({...f,[k]:e.target.value})}/>
+            </div>
+          ))}
+          <div style={{background:T.orangeLt,borderRadius:14,padding:'12px 16px',display:'flex',gap:10,alignItems:'flex-start'}}>
+            <Ico n="shield" s={16} c={T.orange} style={{flexShrink:0,marginTop:1}}/>
+            <p style={{fontFamily:'Public Sans',fontSize:12,color:T.orange,lineHeight:'18px'}}>Your info is protected by biometric verification. No one can impersonate you.</p>
+          </div>
+          <button className="btn btn-gradient" onClick={()=>nav('id-select')}>Continue</button>
+          <p style={{textAlign:'center',fontSize:12,color:T.mid,fontFamily:'Public Sans'}}>Already have an account? <span style={{color:T.orange,fontWeight:700,cursor:'pointer'}} onClick={()=>nav('signin')}>Sign in</span></p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── SIGN IN ── */
+const SignIn=({nav})=>(
+  <div className="screen" style={{background:T.bg}}>
+    <SBar/>
+    <div style={{padding:'8px 24px 0'}}>
+      <BackHdr title="" onBack={()=>nav('welcome')}/>
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:13,color:T.mid,marginBottom:2}}>Good to see you again 👋</div>
+        <h2 style={{fontFamily:'Public Sans',fontWeight:900,fontSize:28,letterSpacing:'-1px',color:T.dark}}>Welcome back,<br/><span style={{color:T.plum}}>Ka-Bayan!</span></h2>
+      </div>
+    </div>
+    <div className="scrollable" style={{flex:1,padding:'0 24px'}}>
+      <div style={{display:'flex',flexDirection:'column',gap:14}}>
+        {[['Email Address','juan@email.com','email'],['Password','••••••••','password']].map(([l,ph,t])=>(
+          <div key={l}>
+            <label className="inp-label">{l}</label>
+            <input className="inp" type={t} placeholder={ph}/>
+          </div>
+        ))}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer'}}>
+            <div style={{width:20,height:20,borderRadius:6,border:`1.5px solid ${T.plum}`,display:'flex',alignItems:'center',justifyContent:'center'}}/>
+            <span style={{fontSize:12,fontWeight:600,color:T.plum}}>Remember me</span>
+          </label>
+          <span style={{fontSize:12,fontWeight:700,color:T.orange,cursor:'pointer'}}>Forgot password?</span>
+        </div>
+        <button className="btn btn-gradient" onClick={()=>nav('resident-dash')}>Log In as Resident</button>
+        <button className="btn btn-white" onClick={()=>nav('worker-dash')} style={{border:`1.5px solid rgba(145,27,68,.15)`}}>Log In as Worker</button>
+        <p style={{textAlign:'center',fontSize:12,color:T.mid}}>Don't have an account? <span style={{color:T.orange,fontWeight:700,cursor:'pointer'}} onClick={()=>nav('signup')}>Sign up</span></p>
+      </div>
+    </div>
+  </div>
+);
+
+/* ── ID SELECT ── */
+const IDSelect=({nav})=>(
+  <div className="screen" style={{background:T.bg}}>
+    <SBar/>
+    <div style={{padding:'8px 24px 0'}}>
+      <BackHdr title="" onBack={()=>nav('signup')}/>
+      <div style={{fontSize:13,color:T.mid,marginBottom:4}}>Step 2 of 3</div>
+      <h2 style={{fontFamily:'Public Sans',fontWeight:900,fontSize:26,letterSpacing:'-1px',color:T.dark,marginBottom:6}}>Choose your<br/><span style={{color:T.plum}}>verification document.</span></h2>
+      <div style={{display:'flex',gap:4,margin:'14px 0 20px'}}>
+        {[T.orange,T.orange,'rgba(255,90,0,.2)'].map((c,i)=><div key={i} style={{flex:1,height:4,borderRadius:999,background:c}}/>)}
+      </div>
+    </div>
+    <div className="scrollable" style={{flex:1,padding:'0 24px'}}>
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        {[{t:'National ID',s:'Government issued',e:'🪪'},{t:'Student ID',s:'University issued',e:'🎓'},{t:'Barangay ID',s:'Local government issued',e:'🏛️'}].map((item,i)=>(
+          <button key={i} onClick={()=>nav('id-scan')} style={{background:'#fff',border:`1.5px solid ${T.border}`,borderRadius:20,padding:'18px 20px',display:'flex',alignItems:'center',gap:16,cursor:'pointer',transition:'all .18s',boxShadow:'0 2px 12px rgba(0,0,0,.05)'}}>
+            <div style={{width:56,height:56,borderRadius:16,background:T.orangeLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,flexShrink:0}}>{item.e}</div>
+            <div style={{flex:1,textAlign:'left'}}>
+              <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:16,color:T.plum,marginBottom:2}}>{item.t}</div>
+              <div style={{fontSize:12,color:T.mid,fontWeight:500}}>{item.s}</div>
+            </div>
+            <div style={{width:32,height:32,borderRadius:10,background:T.orangeLt,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <Ico n="arrow" s={16} c={T.orange}/>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+/* ── ID SCAN ── */
+const IDScan=({nav})=>{
+  const [done,setDone]=useState(false);
+  useEffect(()=>{if(done){const t=setTimeout(()=>nav('id-review'),800);return()=>clearTimeout(t)}},[done]);
+  return(
+    <div className="screen" style={{background:T.bg}}>
+      <SBar/>
+      <BackHdr title="Scan Your ID" onBack={()=>nav('id-select')}/>
+      <div style={{display:'flex',gap:4,padding:'0 24px',marginBottom:20}}>
+        {[T.orange,'rgba(255,90,0,.2)','rgba(255,90,0,.2)'].map((c,i)=><div key={i} style={{flex:1,height:4,borderRadius:999,background:c}}/>)}
+      </div>
+      {/* viewfinder */}
+      <div style={{margin:'0 auto',width:340,height:200,borderRadius:20,background:'#111',overflow:'hidden',position:'relative'}}>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,#1a0d14,#0d0d1a)'}}/>
+        {!done&&<div style={{position:'absolute',left:24,right:24,height:2,background:`linear-gradient(90deg,transparent,${T.orange},transparent)`,animation:'scan 2s ease-in-out infinite'}}/>}
+        {done?(
+          <div style={{position:'absolute',inset:0,background:'rgba(34,197,94,.12)',display:'flex',alignItems:'center',justifyContent:'center',animation:'fadeIn .3s ease'}}>
+            <div style={{width:56,height:56,background:'#22c55e',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 0 16px rgba(34,197,94,.2)'}}>
+              <Ico n="check" s={24} c="#fff"/>
+            </div>
+          </div>
+        ):(
+          <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',opacity:.12}}>
+            <Ico n="id" s={80} c="#fff"/>
+          </div>
+        )}
+        {/* corners */}
+        {[[0,0],[0,1],[1,0],[1,1]].map(([r,c],i)=>(
+          <div key={i} style={{position:'absolute',width:20,height:20,top:r?'auto':12,bottom:r?12:'auto',left:c?'auto':12,right:c?12:'auto',borderTop:!r?`3px solid ${T.orange}`:'none',borderBottom:r?`3px solid ${T.orange}`:'none',borderLeft:!c?`3px solid ${T.orange}`:'none',borderRight:c?`3px solid ${T.orange}`:'none',borderTopLeftRadius:(!r&&!c)?6:0,borderTopRightRadius:(!r&&c)?6:0,borderBottomLeftRadius:(r&&!c)?6:0,borderBottomRightRadius:(r&&c)?6:0}}/>
+        ))}
+      </div>
+      <div style={{textAlign:'center',padding:'24px 40px 0'}}>
+        <div style={{width:52,height:52,borderRadius:14,background:T.orangeLt,margin:'0 auto 12px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <Ico n="id" s={24} c={T.orange}/>
+        </div>
+        <h3 style={{fontFamily:'Public Sans',fontWeight:800,fontSize:20,color:T.plum,marginBottom:8,letterSpacing:'-.5px'}}>Scan Document</h3>
+        <p style={{fontSize:13,color:T.mid,lineHeight:'20px'}}>Align your ID within the frame. It will be captured automatically.</p>
+      </div>
+      <div style={{marginTop:'auto',padding:'20px 24px 36px'}}>
+        <button className="btn btn-gradient" onClick={()=>setDone(true)} style={{boxShadow:'0 6px 20px rgba(145,27,68,.3)'}}>
+          {done?'Processing...':'Simulate Capture'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ── ID REVIEW ── */
+const IDReview=({nav})=>(
+  <div className="screen" style={{background:T.bg}}>
+    <SBar/>
+    <BackHdr title="Confirm Details" onBack={()=>nav('id-scan')}/>
+    <div style={{display:'flex',gap:4,padding:'0 24px 16px'}}>
+      {[T.orange,T.orange,'rgba(255,90,0,.2)'].map((c,i)=><div key={i} style={{flex:1,height:4,borderRadius:999,background:c}}/>)}
+    </div>
+    <div className="scrollable" style={{flex:1,padding:'0 24px'}}>
+      <p style={{fontSize:13,color:T.mid,lineHeight:'20px',marginBottom:16}}>Verify that the extracted details match your ID exactly.</p>
+      <div className="card" style={{marginBottom:16,overflow:'hidden'}}>
+        <div style={{background:T.grad,padding:'14px 18px',display:'flex',alignItems:'center',gap:10}}>
+          <Ico n="id" s={18} c="#fff"/>
+          <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:13,color:'#fff',letterSpacing:'.3px'}}>National ID — Extracted Data</span>
+        </div>
+        {[['Full Name','Juan Dela Cruz'],['Date of Birth','15 Oct 1998'],['ID Number','1234-5678-9012'],['Sex','Male'],['Blood Type','O+'],['Address','Panabo City, Davao del Norte']].map(([k,v],i,a)=>(
+          <div key={k} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 18px',borderBottom:i<a.length-1?`1px solid ${T.border}`:'none'}}>
+            <span style={{fontSize:12,fontWeight:500,color:T.mid}}>{k}</span>
+            <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:13,color:T.plum}}>{v}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:10,paddingBottom:24}}>
+        <button className="btn btn-gradient" onClick={()=>nav('face-scan')} style={{boxShadow:'0 6px 20px rgba(145,27,68,.3)'}}>Confirm &amp; Proceed</button>
+        <button className="btn btn-ghost" onClick={()=>nav('id-scan')}>Retake Photo</button>
+      </div>
+    </div>
+  </div>
+);
+
+/* ── FACE SCAN ── */
+const FaceScan=({nav})=>{
+  const [phase,setPhase]=useState('ready');
+  const [prog,setProg]=useState(0);
+  useEffect(()=>{
+    if(phase!=='scanning')return;
+    const iv=setInterval(()=>setProg(p=>{if(p>=100){clearInterval(iv);setPhase('done');return 100;}return p+1.5;}),50);
+    return()=>clearInterval(iv);
+  },[phase]);
+  useEffect(()=>{if(phase==='done'){const t=setTimeout(()=>nav('verify-success'),1000);return()=>clearTimeout(t);}},[phase]);
+  const circ=2*Math.PI*110;
+  return(
+    <div className="screen" style={{background:T.bg}}>
+      <SBar/>
+      <BackHdr title="Identity Verification" onBack={()=>nav('id-review')}/>
+      <div style={{display:'flex',gap:4,padding:'0 24px 16px'}}>
+        {[T.orange,T.orange,T.orange].map((c,i)=><div key={i} style={{flex:1,height:4,borderRadius:999,background:c}}/>)}
+      </div>
+      <div style={{display:'flex',justifyContent:'center',margin:'8px 0'}}>
+        <div style={{position:'relative',width:260,height:295}}>
+          <svg width="260" height="295" style={{position:'absolute',inset:0}} viewBox="0 0 260 295">
+            <ellipse cx="130" cy="150" rx="116" ry="137" fill={phase==='done'?'rgba(34,197,94,.08)':'rgba(5,2,8,.88)'} stroke={phase==='done'?'#22c55e':phase==='scanning'?T.orange:T.plum} strokeWidth="2.5"/>
+            {phase==='scanning'&&<ellipse cx="130" cy="150" rx="116" ry="137" fill="none" stroke={T.orange} strokeWidth="12" strokeOpacity=".15" style={{animation:'pulse 1.5s ease-in-out infinite'}}/>}
+            {phase==='scanning'&&(
+              <ellipse cx="130" cy="150" rx="116" ry="137" fill="none" stroke={T.plum} strokeWidth="3"
+                strokeDasharray={circ} strokeDashoffset={circ*(1-prog/100)} strokeLinecap="round"
+                style={{transform:'rotate(-90deg)',transformOrigin:'130px 150px',transition:'stroke-dashoffset .08s linear'}}/>
+            )}
+          </svg>
+          <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            {phase==='done'
+              ?<div style={{animation:'fadeIn .4s ease'}}><div style={{width:72,height:72,borderRadius:'50%',background:'#22c55e',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 0 20px rgba(34,197,94,.15)'}}>
+                <Ico n="check" s={32} c="#fff"/></div></div>
+              :<div style={{opacity:phase==='scanning'?.6:.25}}><Ico n="user" s={80} c={phase==='scanning'?T.orange:'#fff'}/></div>
+            }
+          </div>
+          {phase==='scanning'&&(
+            <>
+              <div style={{position:'absolute',left:-8,top:'48%',transform:'translateY(-50%)',width:34,height:34,borderRadius:'50%',background:'#22c55e',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 12px rgba(34,197,94,.4)'}}><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+              <div style={{position:'absolute',right:-8,top:'48%',transform:'translateY(-50%)',width:34,height:34,borderRadius:'50%',background:T.orange,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 12px rgba(236,89,20,.4)'}}><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+            </>
+          )}
+          {phase==='scanning'&&<div style={{position:'absolute',bottom:40,left:'50%',transform:'translateX(-50%)',background:T.plum,color:'#fff',borderRadius:999,padding:'4px 14px',fontFamily:'Public Sans',fontWeight:700,fontSize:12,whiteSpace:'nowrap'}}>{Math.round(prog)}%</div>}
+        </div>
+      </div>
+      <div style={{textAlign:'center',padding:'8px 36px'}}>
+        <h3 style={{fontFamily:'Public Sans',fontWeight:800,fontSize:19,letterSpacing:'-.5px',color:T.plumDeep,marginBottom:8}}>
+          {phase==='ready'?'Position your face within the frame.':phase==='scanning'?'Slowly turn your head left and right.':'Liveness scan complete!'}
+        </h3>
+        <p style={{fontSize:13,color:T.orange,fontWeight:500,lineHeight:'19px'}}>
+          {phase==='ready'?'Ensure good lighting. Keep your face clearly visible.':phase==='scanning'?'Follow the arrows. Hold still between turns.':'Preparing your Ka-Bayan profile...'}
+        </p>
+      </div>
+      <div style={{marginTop:'auto',padding:'16px 24px 36px'}}>
+        {phase==='ready'?<button className="btn btn-gradient" onClick={()=>setPhase('scanning')} style={{boxShadow:'0 6px 20px rgba(145,27,68,.3)'}}>Start Scanning</button>
+        :phase==='scanning'?<button className="btn btn-plum" disabled style={{opacity:.6}}>Scanning... {Math.round(prog)}%</button>
+        :<button className="btn" style={{background:'#22c55e',color:'#fff'}}>✓ Verified!</button>}
+      </div>
+    </div>
+  );
+};
+
+/* ── VERIFY SUCCESS ── */
+const VerifySuccess=({nav})=>(
+  <div className="screen" style={{background:T.bg,display:'flex',flexDirection:'column',alignItems:'center'}}>
+    <SBar/>
+    <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 40px'}}>
+      <div style={{width:120,height:120,background:'#22c55e',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 20px 48px rgba(34,197,94,.3)',marginBottom:32,animation:'fadeIn .5s ease'}}>
+        <Ico n="check" s={52} c="#fff"/>
+      </div>
+      <Tag c="green">✓ Ka-Bayan Verified</Tag>
+      <div style={{height:16}}/>
+      <h2 style={{fontFamily:'Public Sans',fontWeight:900,fontSize:30,letterSpacing:'-1px',color:T.plumDk,textAlign:'center',marginBottom:10}}>Verification<br/>Complete!</h2>
+      <p style={{fontSize:14,color:T.mid,textAlign:'center',lineHeight:'22px',marginBottom:40}}>Your face and ID have been matched and secured. You're now part of the Ka-Bayan community.</p>
+      <div style={{width:'100%',background:'#fff',borderRadius:18,padding:'16px',boxShadow:'0 2px 16px rgba(0,0,0,.06)',display:'flex',gap:20}}>
+        {[{e:'🛡️',t:'Biometric ID',s:'Linked'},{e:'📍',t:'GPS Tracking',s:'Enabled'},{e:'💳',t:'Wallet',s:'₱30 bond'}].map(m=>(
+          <div key={m.t} style={{flex:1,textAlign:'center'}}>
+            <div style={{fontSize:22,marginBottom:4}}>{m.e}</div>
+            <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:11,color:T.dark}}>{m.t}</div>
+            <div style={{fontSize:10,color:T.green,fontWeight:600}}>{m.s}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div style={{width:'100%',padding:'0 24px 40px',display:'flex',flexDirection:'column',gap:10}}>
+      <button className="btn btn-gradient" onClick={()=>nav('resident-dash')} style={{boxShadow:'0 6px 20px rgba(145,27,68,.3)'}}>Continue as Resident</button>
+      <button className="btn btn-white" onClick={()=>nav('worker-dash')} style={{border:`1.5px solid ${T.border}`}}>Continue as Worker</button>
+    </div>
+  </div>
+);
+
+/* ════════════════════════════════════
+   RESIDENT DASHBOARD
+════════════════════════════════════ */
+const ResidentDash=({nav})=>{
+  const tasks=[
+    {icon:'🧹',title:'House Cleaning',worker:'Juan Z.',status:'In Progress',stat:'orange',time:'10:15 AM'},
+    {icon:'🛒',title:'Pabili – SM',worker:'Maria L.',status:'Accepted',stat:'green',time:'2:00 PM'},
+  ];
+  return(
+    <div className="screen" style={{background:T.bg}}>
+      <SBar/>
+      <div style={{background:'#fff',padding:'12px 24px 16px',boxShadow:'0 2px 16px rgba(0,0,0,.04)',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:T.mid}}>Good morning 👋</div>
+            <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:20,letterSpacing:'-.6px',color:T.plum}}>Ana Santos</div>
+          </div>
+          <div style={{display:'flex',gap:10,alignItems:'center'}}>
+            <button onClick={()=>nav('create-task')} style={{width:38,height:38,borderRadius:10,background:T.orange,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <Ico n="plus" s={18} c="#fff"/>
+            </button>
+            <button style={{width:38,height:38,borderRadius:10,background:T.orangeLt,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <Ico n="bell" s={18} c={T.orange}/>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="scrollable" style={{flex:1,padding:'16px 20px 96px'}}>
+        {/* Quick stats */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
+          {[{label:'Active Tasks',val:'2',icon:'tasks',bg:T.plum},{label:'This Month',val:'₱1,240',icon:'wallet',bg:T.orange},{label:'Workers Hired',val:'8',icon:'user',bg:'#0891b2'},{label:'Avg Rating',val:'4.9★',icon:'star',bg:'#059669'}].map(m=>(
+            <div key={m.label} style={{background:'#fff',borderRadius:18,padding:'14px',boxShadow:'0 2px 14px rgba(0,0,0,.06)'}}>
+              <div style={{width:36,height:36,borderRadius:10,background:m.bg+'18',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:8}}>
+                <Ico n={m.icon} s={18} c={m.bg}/>
+              </div>
+              <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:22,color:T.dark,letterSpacing:'-.5px'}}>{m.val}</div>
+              <div style={{fontSize:11,fontWeight:600,color:T.mid,marginTop:2}}>{m.label}</div>
+            </div>
+          ))}
+        </div>
+        {/* Quick actions */}
+        <div style={{marginBottom:20}}>
+          <div className="sec-head"><span className="sec-title">Quick Actions</span></div>
+          <div style={{display:'flex',gap:10}}>
+            {[{e:'🧹',t:'Cleaning',c:'#ec5914'},{e:'🛒',t:'Pabili',c:'#0891b2'},{e:'🧺',t:'Laundry',c:'#7c3aed'},{e:'🍽️',t:'Dishes',c:'#059669'}].map(q=>(
+              <button key={q.t} onClick={()=>nav('create-task')} style={{flex:1,background:'#fff',border:'none',borderRadius:16,padding:'12px 4px 10px',cursor:'pointer',boxShadow:'0 2px 12px rgba(0,0,0,.06)',display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
+                <div style={{width:42,height:42,borderRadius:12,background:q.c+'18',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>{q.e}</div>
+                <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:10,color:T.dark,letterSpacing:.3}}>{q.t}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Active tasks */}
+        <div style={{marginBottom:20}}>
+          <div className="sec-head"><span className="sec-title">Active Tasks</span><button className="sec-link">View all</button></div>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {tasks.map((t,i)=>(
+              <div key={i} onClick={()=>nav('hirer-map')} style={{background:'#fff',borderRadius:18,padding:'14px 16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)',cursor:'pointer',display:'flex',gap:12,alignItems:'center'}}>
+                <div style={{width:46,height:46,borderRadius:14,background:T.orangeLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>{t.icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:14,color:T.dark,marginBottom:2}}>{t.title}</div>
+                  <div style={{fontSize:12,color:T.mid}}>Worker: <b style={{color:T.plum}}>{t.worker}</b></div>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <Tag c={t.stat}>{t.status}</Tag>
+                  <div style={{fontSize:10,color:T.mid,marginTop:4}}>{t.time}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Nearby workers map preview */}
+        <div style={{marginBottom:20}}>
+          <div className="sec-head"><span className="sec-title">Nearby Workers</span><button className="sec-link" onClick={()=>nav('hirer-map')}>Open Map</button></div>
+          <div style={{background:'#d4e8cc',borderRadius:18,height:140,overflow:'hidden',position:'relative',cursor:'pointer'}} onClick={()=>nav('hirer-map')}>
+            <div style={{position:'absolute',inset:0,opacity:.3,backgroundImage:'linear-gradient(rgba(100,140,90,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(100,140,90,.5) 1px,transparent 1px)',backgroundSize:'28px 28px'}}/>
+            <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,rgba(100,160,80,.2),rgba(80,140,100,.1))'}}/>
+            {/* roads */}
+            <div style={{position:'absolute',background:'rgba(255,255,255,.7)',height:6,top:'40%',left:0,right:0,borderRadius:2}}/>
+            <div style={{position:'absolute',background:'rgba(255,255,255,.7)',width:6,top:0,bottom:0,left:'35%',borderRadius:2}}/>
+            {/* markers */}
+            <div style={{position:'absolute',top:'42%',left:'34%',transform:'translate(-50%,-50%)'}}>
+              <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:32,height:32,borderRadius:'50%',background:'rgba(0,101,143,.2)',animation:'ping 2s infinite'}}/>
+              <div style={{width:12,height:12,borderRadius:'50%',background:T.orange,border:'2px solid #fff',position:'relative'}}/>
+            </div>
+            {[[55,30],[65,55],[28,65]].map(([l,t2],i)=>(
+              <div key={i} style={{position:'absolute',top:`${t2}%`,left:`${l}%`,width:28,height:28,borderRadius:'50%',background:'#fc6e62',border:'2px solid #fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,boxShadow:'0 2px 8px rgba(0,0,0,.2)'}}>👤</div>
+            ))}
+            <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:120,height:120,borderRadius:'50%',border:`1.5px dashed ${T.orange}`,background:'rgba(236,89,20,.06)'}}/>
+            {/* overlay */}
+            <div style={{position:'absolute',bottom:0,left:0,right:0,background:'linear-gradient(to top,rgba(0,0,0,.4),transparent)',padding:'10px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <span style={{color:'#fff',fontFamily:'Public Sans',fontWeight:700,fontSize:12}}>3 workers available nearby</span>
+              <span style={{color:T.orange,fontFamily:'Public Sans',fontWeight:700,fontSize:11}}>2km radius →</span>
+            </div>
+          </div>
+        </div>
+        {/* Spending summary */}
+        <div style={{background:'#fff',borderRadius:18,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)',marginBottom:20}}>
+          <div className="sec-head" style={{marginBottom:10}}><span className="sec-title">Spending This Month</span></div>
+          {[{l:'House Cleaning',v:480,pct:60,c:T.plum},{l:'Pabili / Grocery',v:320,pct:40,c:T.orange},{l:'Laundry',v:240,pct:30,c:'#0891b2'}].map(s=>(
+            <div key={s.l} style={{marginBottom:10}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                <span style={{fontSize:12,fontWeight:600,color:T.dark}}>{s.l}</span>
+                <span style={{fontSize:12,fontWeight:700,color:T.plum}}>₱{s.v}</span>
+              </div>
+              <div style={{height:6,borderRadius:999,background:'rgba(0,0,0,.06)',overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${s.pct}%`,borderRadius:999,background:s.c}}/>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Recent History */}
+        <div style={{background:'#fff',borderRadius:18,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)'}}>
+          <div className="sec-head"><span className="sec-title">Task History</span><button className="sec-link">See all</button></div>
+          {[{e:'🧹',t:'House Cleaning',w:'Juan Z.',p:'₱230',d:'Apr 20',r:'★ 5.0'},{e:'🛒',t:'Pabili – Grocery',w:'Maria L.',p:'₱180',d:'Apr 18',r:'★ 4.8'},{e:'🧺',t:'Laundry Service',w:'Carlo M.',p:'₱150',d:'Apr 14',r:'★ 5.0'}].map((h,i)=>(
+            <div key={i} style={{display:'flex',gap:12,alignItems:'center',padding:'10px 0',borderBottom:i<2?`1px solid ${T.border}`:'none'}}>
+              <div style={{width:40,height:40,borderRadius:12,background:T.orangeLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>{h.e}</div>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:13,color:T.dark}}>{h.t}</div>
+                <div style={{fontSize:11,color:T.mid}}>{h.w} • {h.d}</div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:13,color:T.plum}}>{h.p}</div>
+                <div style={{fontSize:11,color:'#f59e0b',fontWeight:600}}>{h.r}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <BNav active="home" onNav={id=>{
+        if(id==='tasks')nav('create-task');
+        if(id==='wallet')nav('resident-dash');
+        if(id==='profile')nav('resident-dash');
+      }}/>
+    </div>
+  );
+};
+
+/* ════════════════════════════════════
+   WORKER DASHBOARD
+════════════════════════════════════ */
+const WorkerDash=({nav})=>{
+  const [online,setOnline]=useState(true);
+  return(
+    <div className="screen" style={{background:T.bg}}>
+      <SBar/>
+      <div style={{background:'#fff',padding:'12px 24px 14px',boxShadow:'0 2px 16px rgba(0,0,0,.04)',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{display:'flex',gap:12,alignItems:'center'}}>
+            <Avatar size={44} seed="J" bg={T.grad}/>
+            <div>
+              <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:16,letterSpacing:'-.4px',color:T.plum}}>Juan Zamora</div>
+              <Tag c="green">✓ Ka-Bayan Verified</Tag>
+            </div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:12,fontWeight:700,color:online?T.orange:T.mid}}>{online?'ONLINE':'OFFLINE'}</span>
+            <button onClick={()=>setOnline(p=>!p)} style={{width:48,height:26,borderRadius:13,background:online?T.orange:'#d1d5db',border:'none',cursor:'pointer',position:'relative',transition:'background .3s'}}>
+              <div style={{position:'absolute',top:3,left:online?24:3,width:20,height:20,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 4px rgba(0,0,0,.2)',transition:'left .3s'}}/>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="scrollable" style={{flex:1,padding:'16px 20px 96px'}}>
+        {/* Trust + Earnings ring */}
+        <div style={{display:'flex',gap:12,marginBottom:20}}>
+          <div style={{flex:1,background:'#fff',borderRadius:20,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)',display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+            <Ring pct={67} size={90} stroke={9} c1={T.plum} c2='rgba(145,27,68,.1)'>
+              <span style={{fontFamily:'Public Sans',fontWeight:800,fontSize:20,color:T.plum}}>67</span>
+            </Ring>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:12,color:T.dark}}>Trust Score</div>
+              <div style={{fontSize:10,color:T.mid}}>Top 12% in Panabo</div>
+            </div>
+          </div>
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:10}}>
+            <div style={{background:T.grad,borderRadius:18,padding:'14px 16px',flex:1}}>
+              <div style={{fontSize:11,color:'rgba(255,255,255,.7)',marginBottom:4}}>Today's Earnings</div>
+              <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:22,color:'#fff',letterSpacing:'-.5px'}}>₱207</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,.6)'}}>+₱50 rush bonus</div>
+            </div>
+            <div style={{background:'#fff',borderRadius:18,padding:'14px 16px',flex:1,boxShadow:'0 2px 14px rgba(0,0,0,.06)'}}>
+              <div style={{fontSize:11,color:T.mid,marginBottom:4}}>Rating</div>
+              <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:22,color:T.orange,letterSpacing:'-.5px'}}>4.8★</div>
+              <div style={{fontSize:10,color:T.mid}}>30 tasks done</div>
+            </div>
+          </div>
+        </div>
+        {/* Wallet */}
+        <div style={{background:'#fff',borderRadius:20,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)',marginBottom:20}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+            <span className="sec-title">Ka-Bayan Wallet</span>
+            <Tag c="green">Trust Bond Active</Tag>
+          </div>
+          <div style={{display:'flex',gap:12}}>
+            <div style={{flex:1,background:T.grad,borderRadius:14,padding:'14px'}}>
+              <div style={{fontSize:11,color:'rgba(255,255,255,.7)',marginBottom:4}}>Balance</div>
+              <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:24,color:'#fff'}}>₱342.50</div>
+            </div>
+            <div style={{width:90,background:T.orangeLt,borderRadius:14,padding:'14px',display:'flex',flexDirection:'column',justifyContent:'center'}}>
+              <div style={{fontSize:10,color:T.orange,marginBottom:4,fontWeight:600}}>Trust Bond</div>
+              <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:18,color:T.orange}}>₱30</div>
+            </div>
+          </div>
+        </div>
+        {/* Task alert */}
+        {online&&(
+          <button onClick={()=>nav('task-available')} style={{width:'100%',background:'#fff',border:`2px solid ${T.orange}`,borderRadius:20,padding:'14px 16px',marginBottom:10,cursor:'pointer',textAlign:'left',boxShadow:'0 4px 20px rgba(236,89,20,.15)',animation:'glow 2.5s ease-in-out infinite'}}>
+            <div style={{display:'flex',gap:12,alignItems:'center'}}>
+              <div style={{width:46,height:46,borderRadius:14,background:T.orangeLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>🔔</div>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:14,color:T.orange}}>New Task Available!</div>
+                <div style={{fontSize:12,color:T.mid}}>House Cleaning • 0.6km • ₱207.00</div>
+              </div>
+              <Ico n="arrow" s={20} c={T.orange}/>
+            </div>
+          </button>
+        )}
+        {/* Browse tasks button */}
+        <button onClick={()=>nav('nearby-tasks')} style={{width:'100%',background:'#fff',border:`1.5px solid ${T.border}`,borderRadius:20,padding:'13px 16px',marginBottom:20,cursor:'pointer',textAlign:'left',boxShadow:'0 2px 12px rgba(0,0,0,.05)'}}>
+          <div style={{display:'flex',gap:12,alignItems:'center'}}>
+            <div style={{width:46,height:46,borderRadius:14,background:'rgba(145,27,68,.07)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <Ico n="loc" s={22} c={T.plum}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:14,color:T.plum}}>Browse Nearby Tasks</div>
+              <div style={{fontSize:12,color:T.mid}}>5 tasks available within 2km</div>
+            </div>
+            <Ico n="arrow" s={20} c={T.plum}/>
+          </div>
+        </button>
+        {/* Weekly earnings chart */}
+        <div style={{background:'#fff',borderRadius:20,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)',marginBottom:20}}>
+          <div className="sec-head"><span className="sec-title">Weekly Earnings</span><span style={{fontSize:12,fontWeight:700,color:T.plum}}>₱1,035 this week</span></div>
+          <div style={{display:'flex',alignItems:'flex-end',gap:8,height:80}}>
+            {[{d:'Mon',v:40},{d:'Tue',v:65},{d:'Wed',v:50},{d:'Thu',v:80},{d:'Fri',v:100},{d:'Sat',v:75},{d:'Sun',v:45}].map((b,i)=>(
+              <div key={b.d} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                <div style={{width:'100%',height:`${b.v}%`,borderRadius:6,background:i===4?T.grad:`rgba(145,27,68,.12)`,transition:'all .3s'}}/>
+                <span style={{fontSize:9,fontWeight:600,color:i===4?T.plum:T.mid}}>{b.d}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Probation / status */}
+        <div style={{background:'#fff',borderRadius:20,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)',marginBottom:20}}>
+          <div className="sec-head"><span className="sec-title">Rookie Status</span><Tag c="orange">5 tasks left</Tag></div>
+          <div style={{height:8,borderRadius:999,background:'rgba(0,0,0,.06)',overflow:'hidden',marginBottom:8}}>
+            <div style={{height:'100%',width:'60%',borderRadius:999,background:T.grad}}/>
+          </div>
+          <p style={{fontSize:12,color:T.mid,lineHeight:'18px'}}>Complete 5 more tasks to unlock <b style={{color:T.plum}}>Pabili (grocery)</b> requests and full Ka-Bayan benefits.</p>
+        </div>
+        {/* Recent tasks */}
+        <div style={{background:'#fff',borderRadius:20,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)'}}>
+          <div className="sec-head"><span className="sec-title">Recent Tasks</span><button className="sec-link">History</button></div>
+          {[{e:'🧹',t:'House Cleaning',c:'Ana S.',p:'₱207',d:'Today 10:15'},{e:'🧺',t:'Laundry Service',c:'Rosa M.',p:'₱165',d:'Apr 22'},{e:'🍽️',t:'Dishwashing',c:'Ben C.',p:'₱120',d:'Apr 21'}].map((r,i)=>(
+            <div key={i} style={{display:'flex',gap:12,alignItems:'center',padding:'10px 0',borderBottom:i<2?`1px solid ${T.border}`:'none'}}>
+              <div style={{width:40,height:40,borderRadius:12,background:T.orangeLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>{r.e}</div>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:13,color:T.dark}}>{r.t}</div>
+                <div style={{fontSize:11,color:T.mid}}>{r.c} • {r.d}</div>
+              </div>
+              <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:13,color:T.green}}>{r.p}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <BNav active="home" onNav={id=>{
+        if(id==='tasks')nav('nearby-tasks');
+        if(id==='wallet')nav('worker-dash');
+        if(id==='profile')nav('worker-dash');
+      }}/>
+    </div>
+  );
+};
+
+/* ── HIRER MAP ── */
+const HirerMap=({nav})=>(
+  <div className="screen" style={{background:T.bg}}>
+    <SBar/>
+    <AppHdr onNotif={()=>{}}/>
+    <div style={{flex:1,position:'relative',overflow:'hidden'}}>
+      {/* map */}
+      <div style={{position:'absolute',inset:0,background:'#d4e8cc'}}>
+        <div style={{position:'absolute',inset:0,opacity:.25,backgroundImage:'linear-gradient(rgba(80,120,60,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(80,120,60,.5) 1px,transparent 1px)',backgroundSize:'32px 32px'}}/>
+        <div style={{position:'absolute',background:'rgba(255,255,255,.7)',height:8,top:'38%',left:0,right:0}}/>
+        <div style={{position:'absolute',background:'rgba(255,255,255,.7)',height:8,top:'62%',left:0,right:0}}/>
+        <div style={{position:'absolute',background:'rgba(255,255,255,.7)',width:8,top:0,bottom:0,left:'30%'}}/>
+        <div style={{position:'absolute',background:'rgba(255,255,255,.7)',width:8,top:0,bottom:0,left:'70%'}}/>
+        {/* 2km ring */}
+        <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:260,height:260,borderRadius:'50%',border:`2px dashed ${T.orange}`,background:'rgba(236,89,20,.05)'}}/>
+        {/* Center dot */}
+        <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)'}}>
+          <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:44,height:44,borderRadius:'50%',background:'rgba(0,101,143,.15)',animation:'ping 2s ease-in-out infinite'}}/>
+          <div style={{width:14,height:14,borderRadius:'50%',background:T.orange,border:'2.5px solid #fff',boxShadow:'0 3px 8px rgba(0,0,0,.2)',position:'relative'}}/>
+        </div>
+        {/* Workers */}
+        <div style={{position:'absolute',top:'40%',left:'44%',cursor:'pointer'}} onClick={()=>{}}>
+          <div style={{width:48,height:48,borderRadius:'50%',background:'#fc6e62',border:'2.5px solid #fff',overflow:'hidden',boxShadow:'0 6px 20px rgba(0,0,0,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>👤</div>
+        </div>
+        {[[65,28],[28,60]].map(([l,t],i)=>(
+          <div key={i} style={{position:'absolute',top:`${t}%`,left:`${l}%`,width:36,height:36,borderRadius:'50%',background:'#94a3b8',border:'2px solid #fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>👤</div>
+        ))}
+        {/* Floating search */}
+        <div style={{position:'absolute',top:14,left:20,right:20,height:50,background:'rgba(255,255,255,.92)',borderRadius:14,display:'flex',alignItems:'center',padding:'0 14px',gap:10,backdropFilter:'blur(16px)',boxShadow:'0 2px 16px rgba(0,0,0,.1)'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="#94a3b8" strokeWidth="1.8"/><path d="M21 21l-4.35-4.35" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round"/></svg>
+          <span style={{flex:1,fontFamily:'Public Sans',fontWeight:500,fontSize:13,color:'rgba(190,200,209,.9)'}}>Search nearby workers...</span>
+          <Ico n="gear" s={16} c={T.green}/>
+        </div>
+      </div>
+      {/* Bottom sheet */}
+      <div style={{position:'absolute',bottom:0,left:0,right:0,background:'#fff',borderRadius:'24px 24px 0 0',padding:'16px 18px 20px',boxShadow:'0 -4px 32px rgba(0,0,0,.12)'}}>
+        <div style={{width:36,height:4,borderRadius:2,background:'#e2e8f0',margin:'0 auto 14px'}}/>
+        <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}>
+          <Avatar size={52} seed="J" bg={T.grad}/>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:17,letterSpacing:'-.4px',color:T.dark}}>Juan Z.</div>
+            <div style={{display:'flex',alignItems:'center',gap:6,marginTop:2}}>
+              <Ico n="star" s={11} c="#f59e0b"/>
+              <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:13,color:T.dark}}>4.7</span>
+              <span style={{fontSize:12,color:T.mid}}>• 1 m away</span>
+            </div>
+          </div>
+          <Tag c="green">VERIFIED</Tag>
+        </div>
+        {/* Scan banner */}
+        <div style={{background:T.orangeLt,borderRadius:14,border:`1px solid rgba(236,89,20,.3)`,padding:'11px 14px',marginBottom:12}}>
+          <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:13,color:T.orange,marginBottom:3}}>🔍 Entrance Face Scan in Progress</div>
+          <div style={{fontSize:11,color:T.orange,lineHeight:'17px',opacity:.85}}>Worker is at your doorstep. Session begins once Face Scan is 100% matched.</div>
+        </div>
+        {/* Details grid */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12}}>
+          {[['Task ID','KB-4082790'],['Service','House Cleaning'],['Mode','RUSH'],['Arrived','09:00 AM']].map(([k,v])=>(
+            <div key={k} style={{background:T.bg,borderRadius:10,padding:'8px 10px'}}>
+              <div style={{fontSize:10,color:T.mid,marginBottom:2}}>{k}</div>
+              <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:12,color:T.plum}}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:10,borderTop:`1px solid ${T.border}`}}>
+          <div>
+            <div style={{fontSize:11,color:T.mid}}>Total Payment</div>
+            <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:22,color:T.plum,letterSpacing:'-.5px'}}>₱230</div>
+            <div style={{fontSize:10,color:T.mid}}>Base ₱180 + Rush ₱50</div>
+          </div>
+          <button className="btn btn-gradient btn-sm" onClick={()=>nav('create-task')}>+ New Task</button>
+        </div>
+      </div>
+    </div>
+    <BNav active="home" onNav={id=>{if(id==='tasks')nav('create-task');}}/>
+  </div>
+);
+
+/* ── CREATE TASK ── */
+const CreateTask=({nav})=>{
+  const [svc,setSvc]=useState('Cleaning');
+  const [mode,setMode]=useState('rush');
+  const [areas,setAreas]=useState(['Living Room']);
+  const svcs=[{k:'Laundry',e:'🧺'},{k:'Grocery',e:'🛒'},{k:'Cleaning',e:'🧹'},{k:'Dishes',e:'🍽️'}];
+  const allAreas=['Bathroom','Bedroom','Living Room','Kitchen','Garden','Garage'];
+  return(
+    <div className="screen" style={{background:T.bg}}>
+      <SBar light/>
+      <BackHdr title="Create Task" onBack={()=>nav('resident-dash')} light/>
+      <div className="scrollable" style={{flex:1,padding:'16px 20px 120px'}}>
+        <h3 style={{fontFamily:'Public Sans',fontWeight:800,fontSize:20,letterSpacing:'-.6px',color:T.dark,marginBottom:16}}>What do you need help with?</h3>
+        {/* Service */}
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'1.6px',color:T.mid,marginBottom:10}}>SERVICE TYPE</div>
+          <div style={{display:'flex',gap:8}}>
+            {svcs.map(s=>(
+              <button key={s.k} onClick={()=>setSvc(s.k)} style={{flex:1,height:72,borderRadius:16,background:svc===s.k?T.grad:'#fff',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,boxShadow:svc===s.k?'0 6px 20px rgba(145,27,68,.3)':'0 2px 8px rgba(0,0,0,.06)',transition:'all .2s'}}>
+                <span style={{fontSize:20}}>{s.e}</span>
+                <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:10,letterSpacing:.5,color:svc===s.k?'#fff':T.dark}}>{s.k}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Notes */}
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'1.6px',color:T.mid,marginBottom:8}}>NOTES</div>
+          <div style={{background:'#fff',borderRadius:14,padding:'12px 16px',boxShadow:'0 2px 8px rgba(0,0,0,.05)'}}>
+            <input style={{width:'100%',border:'none',outline:'none',fontFamily:'Public Sans',fontSize:13,color:T.plum}} placeholder="Add specific details..."/>
+          </div>
+        </div>
+        {/* Areas */}
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'1.6px',color:T.mid,marginBottom:8}}>SELECT AREAS</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+            {allAreas.map(a=>{const on=areas.includes(a);return(
+              <button key={a} onClick={()=>setAreas(p=>on?p.filter(x=>x!==a):[...p,a])} style={{padding:'7px 14px',borderRadius:999,border:`1.5px solid ${on?T.orange:'rgba(190,200,209,.5)'}`,background:on?T.orangeLt:'#fff',fontFamily:'Public Sans',fontWeight:700,fontSize:12,color:on?T.orange:T.dark,cursor:'pointer',transition:'all .15s'}}>{a}</button>
+            );})}
+          </div>
+        </div>
+        {/* Complexity */}
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'1.6px',color:T.mid,marginBottom:8}}>COMPLEXITY</div>
+          <div style={{display:'flex',gap:8}}>
+            {['Light','Moderate','Heavy'].map(c=>(
+              <button key={c} style={{flex:1,padding:'9px 0',borderRadius:10,border:`1.5px solid ${T.border}`,background:'#fff',fontFamily:'Public Sans',fontWeight:700,fontSize:12,color:T.dark,cursor:'pointer'}}>{c}</button>
+            ))}
+          </div>
+        </div>
+        {/* Mode */}
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'1.6px',color:T.mid,marginBottom:8}}>SERVICE MODE</div>
+          {[{id:'rush',t:'Rush',fee:'+ ₱50',c:T.orange,bg:T.orangeLt,d:'Priority dispatch. Worker notified immediately.'},{id:'standard',t:'Standard',fee:'₱0',c:T.plum,bg:'#f5f0ff',d:'Posted to community board. Best for non-urgent chores.'}].map(m=>(
+            <button key={m.id} onClick={()=>setMode(m.id)} style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'14px 16px',borderRadius:16,background:m.bg,border:`${mode===m.id?'2':'1'}px solid ${m.c+'44'}`,cursor:'pointer',textAlign:'left',marginBottom:8,transition:'all .15s',boxShadow:mode===m.id?`0 4px 16px ${m.c}22`:'none'}}>
+              <div style={{width:44,height:44,borderRadius:12,border:`3px solid ${mode===m.id?m.c:'rgba(0,0,0,.12)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .15s'}}>
+                {mode===m.id&&<div style={{width:22,height:22,borderRadius:'50%',background:m.c}}/>}
+              </div>
+              <div>
+                <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:14,color:m.c}}>{m.t} <span style={{background:m.c+'22',padding:'2px 8px',borderRadius:999,fontSize:11}}>{m.fee}</span></div>
+                <div style={{fontSize:11,color:T.mid,marginTop:3,lineHeight:'16px'}}>{m.d}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        {/* Total */}
+        <div style={{background:'#fff',borderRadius:16,padding:'14px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:'0 2px 8px rgba(0,0,0,.05)'}}>
+          <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:15,color:T.dark}}>Total Payment</span>
+          <span style={{fontFamily:'Public Sans',fontWeight:900,fontSize:22,color:T.plum,letterSpacing:'-.5px'}}>{mode==='rush'?'₱230':'₱180'}</span>
+        </div>
+      </div>
+      <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'12px 20px 32px',background:`linear-gradient(to top,${T.bg} 75%,transparent)`}}>
+        <button className="btn btn-gradient" onClick={()=>nav('resident-dash')} style={{boxShadow:'0 6px 20px rgba(145,27,68,.3)'}}>Publish Request</button>
+      </div>
+    </div>
+  );
+};
+
+/* ── NEARBY TASKS LIST ── */
+const NearbyTasks=({nav})=>{
+  const [filter,setFilter]=useState('All');
+  const [sort,setSort]=useState('distance');
+  const tasks=[
+    {id:'KB-4082790',e:'🧹',title:'House Cleaning',area:'Living Room',client:'Ana S.',dist:'0.6km',pay:207,mode:'RUSH',complexity:'Moderate',time:'09:00 AM',status:'open'},
+    {id:'KB-4082791',e:'🛒',title:'Pabili – SM Panabo',area:'Grocery Run',client:'Rosa M.',dist:'0.9km',pay:165,mode:'Standard',complexity:'Light',time:'11:00 AM',status:'open'},
+    {id:'KB-4082792',e:'🧺',title:'Laundry Service',area:'Full Load',client:'Ben C.',dist:'1.2km',pay:150,mode:'Standard',complexity:'Light',time:'01:00 PM',status:'open'},
+    {id:'KB-4082793',e:'🍽️',title:'Dishwashing',area:'After Party',client:'Carlo D.',dist:'1.5km',pay:120,mode:'Standard',complexity:'Moderate',time:'03:00 PM',status:'open'},
+    {id:'KB-4082794',e:'🧹',title:'Deep Cleaning',area:'Whole House',client:'Maria L.',dist:'1.8km',pay:320,mode:'RUSH',complexity:'Heavy',time:'08:00 AM',status:'open'},
+  ];
+  const filters=['All','Cleaning','Pabili','Laundry','Dishes'];
+  const filtered=filter==='All'?tasks:tasks.filter(t=>t.title.toLowerCase().includes(filter.toLowerCase())||t.e==={Cleaning:'🧹',Pabili:'🛒',Laundry:'🧺',Dishes:'🍽️'}[filter]);
+  const sorted=[...filtered].sort((a,b)=>sort==='distance'?parseFloat(a.dist)-parseFloat(b.dist):b.pay-a.pay);
+  const modeColor=m=>m==='RUSH'?T.orange:T.green;
+  const complexColor=c=>({Light:T.green,Moderate:T.orange,Heavy:T.plum}[c]||T.mid);
+  return(
+    <div className="screen" style={{background:T.bg}}>
+      <SBar/>
+      {/* Header */}
+      <div style={{background:'#fff',padding:'10px 20px 14px',boxShadow:'0 2px 16px rgba(0,0,0,.05)',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+          <div>
+            <div style={{fontFamily:'Public Sans',fontWeight:900,fontSize:20,letterSpacing:'-.6px',color:T.plum}}>Nearby Tasks</div>
+            <div style={{fontSize:12,fontWeight:600,color:T.mid}}>{sorted.length} tasks within 2km</div>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={()=>setSort(s=>s==='distance'?'payout':'distance')} style={{height:36,padding:'0 12px',borderRadius:10,background:T.orangeLt,border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>
+              <Ico n="chart" s={14} c={T.orange}/>
+              <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:11,color:T.orange}}>{sort==='distance'?'By Distance':'By Payout'}</span>
+            </button>
+          </div>
+        </div>
+        {/* Filter chips */}
+        <div style={{display:'flex',gap:7,overflowX:'auto',paddingBottom:2}}>
+          {filters.map(f=>(
+            <button key={f} onClick={()=>setFilter(f)} style={{flexShrink:0,padding:'6px 14px',borderRadius:999,border:'none',background:filter===f?T.grad:'rgba(145,27,68,.07)',color:filter===f?'#fff':T.plum,fontFamily:'Public Sans',fontWeight:700,fontSize:12,cursor:'pointer',transition:'all .18s'}}>
+              {f==='All'?'All':''}
+              {{Cleaning:'🧹 ',Pabili:'🛒 ',Laundry:'🧺 ',Dishes:'🍽️ '}[f]||''}{f}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Map strip */}
+      <div style={{height:130,background:'#d4e8cc',position:'relative',overflow:'hidden',flexShrink:0}}>
+        <div style={{position:'absolute',inset:0,opacity:.22,backgroundImage:'linear-gradient(rgba(80,120,60,.6) 1px,transparent 1px),linear-gradient(90deg,rgba(80,120,60,.6) 1px,transparent 1px)',backgroundSize:'28px 28px'}}/>
+        <div style={{position:'absolute',background:'rgba(255,255,255,.65)',height:7,top:'40%',left:0,right:0}}/>
+        <div style={{position:'absolute',background:'rgba(255,255,255,.65)',width:7,top:0,bottom:0,left:'32%'}}/>
+        <div style={{position:'absolute',background:'rgba(255,255,255,.65)',width:7,top:0,bottom:0,left:'70%'}}/>
+        {/* 2km ring */}
+        <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:190,height:190,borderRadius:'50%',border:`1.5px dashed ${T.orange}`,background:'rgba(236,89,20,.05)'}}/>
+        {/* Worker (you) */}
+        <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)'}}>
+          <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:36,height:36,borderRadius:'50%',background:'rgba(145,27,68,.15)',animation:'ping 2.5s ease-in-out infinite'}}/>
+          <div style={{width:14,height:14,borderRadius:'50%',background:T.plum,border:'2px solid #fff',position:'relative',zIndex:2}}/>
+        </div>
+        {/* Task pins */}
+        {[{l:42,t:34,e:'🧹',c:'#fc6e62'},{l:60,t:55,e:'🛒',c:'#38bdf8'},{l:25,t:60,e:'🧺',c:'#a78bfa'},{l:68,t:28,e:'🍽️',c:'#34d399'},{l:18,t:38,e:'🧹',c:T.plum}].map((p,i)=>(
+          <div key={i} style={{position:'absolute',top:`${p.t}%`,left:`${p.l}%`,transform:'translate(-50%,-50%)'}}>
+            <div style={{width:32,height:32,borderRadius:'50%',background:p.c,border:'2px solid #fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,boxShadow:'0 2px 8px rgba(0,0,0,.25)',cursor:'pointer'}}>{p.e}</div>
+          </div>
+        ))}
+        {/* Label */}
+        <div style={{position:'absolute',top:8,right:10,background:'rgba(0,0,0,.45)',borderRadius:6,padding:'3px 8px'}}>
+          <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:9,color:'#fff',letterSpacing:1}}>YOU ARE HERE</span>
+        </div>
+      </div>
+      {/* Task list */}
+      <div className="scrollable" style={{flex:1,padding:'12px 16px 96px'}}>
+        {sorted.length===0?(
+          <div style={{textAlign:'center',padding:'40px 20px',color:T.mid}}>
+            <div style={{fontSize:40,marginBottom:12}}>🔍</div>
+            <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:15}}>No tasks found</div>
+            <div style={{fontSize:12,marginTop:4}}>Try a different filter</div>
+          </div>
+        ):sorted.map((t,i)=>(
+          <div key={t.id} onClick={()=>nav('task-available')} style={{background:'#fff',borderRadius:20,padding:'14px 16px',marginBottom:10,boxShadow:'0 2px 14px rgba(0,0,0,.06)',cursor:'pointer',transition:'all .18s',border:`1px solid transparent`}}
+            onMouseEnter={e=>e.currentTarget.style.border=`1px solid ${T.orange}33`}
+            onMouseLeave={e=>e.currentTarget.style.border='1px solid transparent'}>
+            <div style={{display:'flex',gap:12,alignItems:'flex-start',marginBottom:10}}>
+              <div style={{width:48,height:48,borderRadius:14,background:T.orangeLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>{t.e}</div>
+              <div style={{flex:1}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
+                  <span style={{fontFamily:'Public Sans',fontWeight:800,fontSize:15,letterSpacing:'-.3px',color:T.dark}}>{t.title}</span>
+                  {t.mode==='RUSH'&&<span style={{background:T.orangeLt,color:T.orange,fontFamily:'Public Sans',fontWeight:700,fontSize:9,letterSpacing:1,padding:'2px 7px',borderRadius:999}}>RUSH</span>}
+                </div>
+                <div style={{fontSize:12,color:T.mid,marginBottom:4}}>{t.area} • Client: <b style={{color:T.plum}}>{t.client}</b></div>
+              </div>
+              <div style={{textAlign:'right',flexShrink:0}}>
+                <div style={{fontFamily:'Public Sans',fontWeight:900,fontSize:18,color:T.green,letterSpacing:'-.5px'}}>₱{t.pay}</div>
+                <div style={{fontSize:10,color:T.mid,marginTop:1}}>{t.time}</div>
+              </div>
+            </div>
+            {/* Tags row */}
+            <div style={{display:'flex',gap:6,alignItems:'center',justifyContent:'space-between'}}>
+              <div style={{display:'flex',gap:6}}>
+                <span style={{display:'inline-flex',alignItems:'center',gap:4,background:'rgba(0,0,0,.04)',borderRadius:999,padding:'4px 10px'}}>
+                  <Ico n="loc" s={11} c={T.mid}/>
+                  <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:11,color:T.mid}}>{t.dist}</span>
+                </span>
+                <span style={{display:'inline-flex',alignItems:'center',gap:4,background:`${complexColor(t.complexity)}15`,borderRadius:999,padding:'4px 10px'}}>
+                  <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:11,color:complexColor(t.complexity)}}>{t.complexity}</span>
+                </span>
+              </div>
+              <button onClick={e=>{e.stopPropagation();nav('task-available');}} style={{height:32,padding:'0 14px',borderRadius:10,background:T.grad,border:'none',cursor:'pointer',fontFamily:'Public Sans',fontWeight:700,fontSize:12,color:'#fff',boxShadow:'0 3px 10px rgba(145,27,68,.3)'}}>Accept</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <BNav active="tasks" onNav={id=>{
+        if(id==='home')nav('worker-dash');
+        if(id==='wallet')nav('worker-dash');
+        if(id==='profile')nav('worker-dash');
+      }}/>
+    </div>
+  );
+};
+
+/* ── TASK AVAILABLE ── */
+const TaskAvailable=({nav})=>{
+  const [sec,setSec]=useState(15);
+  useEffect(()=>{if(sec<=0)return;const iv=setInterval(()=>setSec(p=>Math.max(0,p-1)),1000);return()=>clearInterval(iv);},[]);
+  const circ=2*Math.PI*88,off=circ*(1-sec/15);
+  return(
+    <div className="screen" style={{background:T.bg}}>
+      <SBar/>
+      <BackHdr title="New Task Alert" onBack={()=>nav('worker-dash')}/>
+      <div className="scrollable" style={{flex:1,padding:'8px 20px 32px',display:'flex',flexDirection:'column',alignItems:'center'}}>
+        <div style={{position:'relative',width:200,height:200,marginBottom:16}}>
+          <svg width="200" height="200" viewBox="0 0 200 200" style={{position:'absolute'}}>
+            <circle cx="100" cy="100" r="88" stroke="rgba(236,89,20,.15)" strokeWidth="24" fill="none"/>
+            <circle cx="100" cy="100" r="88" stroke={T.orange} strokeWidth="24" fill="none"
+              strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round"
+              style={{transform:'rotate(-90deg)',transformOrigin:'100px 100px',transition:'stroke-dashoffset 1s linear'}}/>
+          </svg>
+          <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+            <span style={{fontFamily:'Public Sans',fontWeight:900,fontSize:60,color:T.plum,lineHeight:1}}>{sec}</span>
+            <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:14,color:T.plum,letterSpacing:'-.5px'}}>seconds</span>
+          </div>
+        </div>
+        <Tag c="orange">CLEANING WORK AVAILABLE</Tag>
+        <h2 style={{fontFamily:'Public Sans',fontWeight:900,fontSize:26,textAlign:'center',lineHeight:'32px',letterSpacing:'-1px',color:T.plum,margin:'10px 0 20px'}}>House Cleaning<br/>Living Room</h2>
+        <div style={{width:'100%',background:'#fff',borderRadius:20,padding:'16px',boxShadow:'0 2px 16px rgba(0,0,0,.06)',marginBottom:20}}>
+          {[['Service','House Cleaning: Living Room'],['Complexity','Moderate'],['Distance','0.6km'],['Total Payout','₱207.00'],['Mode','Standard']].map(([k,v],i,a)=>(
+            <div key={k} style={{display:'flex',justifyContent:'space-between',padding:'10px 0',borderBottom:i<a.length-1?`1px solid ${T.border}`:'none'}}>
+              <span style={{fontSize:12,fontWeight:500,color:T.mid}}>{k}</span>
+              <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:13,color:T.plum}}>{v}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:10,width:'100%'}}>
+          <button className="btn btn-gradient" onClick={()=>nav('evidence-log')} style={{boxShadow:'0 6px 20px rgba(145,27,68,.3)'}}>Accept Task</button>
+          <button className="btn btn-ghost" onClick={()=>nav('worker-dash')}>Pass</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── EVIDENCE LOG ── */
+const EvidenceLog=({nav})=>{
+  const [captured,setCaptured]=useState(false);
+  const [flash,setFlash]=useState(false);
+  const shoot=()=>{setFlash(true);setTimeout(()=>{setFlash(false);setCaptured(true);},280);};
+  return(
+    <div className="screen" style={{background:'#0a0a0f'}}>
+      <SBar light/>
+      <BackHdr title="Evidence Log" onBack={()=>nav('task-available')} light
+        right={<div style={{background:T.greenLt,borderRadius:999,padding:'4px 12px',display:'flex',alignItems:'center',gap:5}}><Ico n="shield" s={12} c={T.green}/><span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:10,letterSpacing:1,color:T.green}}>SECURE</span></div>}/>
+      <div style={{flex:1,position:'relative',overflow:'hidden'}}>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(160deg,#111018,#0d0a14)'}}>
+          {captured
+            ?<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',animation:'fadeIn .3s ease'}}><div style={{textAlign:'center'}}><span style={{fontSize:72}}>🧹</span><div style={{fontFamily:'Public Sans',fontWeight:600,fontSize:11,color:'rgba(250,245,255,.4)',letterSpacing:2,marginTop:8}}>CAPTURED</div></div></div>
+            :<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',opacity:.1}}><span style={{fontSize:80}}>📷</span></div>
+          }
+        </div>
+        {/* GPS tag */}
+        <div style={{position:'absolute',top:8,left:52,right:52,textAlign:'center'}}>
+          <div style={{display:'inline-block',background:'rgba(0,0,0,.5)',borderRadius:6,padding:'3px 10px'}}>
+            <span style={{fontFamily:'Public Sans',fontWeight:600,fontSize:9,letterSpacing:.8,color:'rgba(250,245,255,.6)'}}>SAHUR SUBD. BRGY. STO. NIÑO | 04.07.26 | 10:15</span>
+          </div>
+        </div>
+        {flash&&<div style={{position:'absolute',inset:0,background:'#fff',opacity:.85}}/>}
+        {/* Verification widget */}
+        <div style={{position:'absolute',bottom:120,left:16,right:16,background:'rgba(255,255,255,.88)',backdropFilter:'blur(20px)',borderRadius:18,padding:'14px 16px',border:'1px solid rgba(255,255,255,.5)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+            <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:12,letterSpacing:.8,color:T.plum}}>Verifying...</span>
+            <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:12,color:T.plum}}>100%</span>
+          </div>
+          <div style={{height:7,borderRadius:999,background:T.bg,overflow:'hidden',marginBottom:10}}>
+            <div style={{height:'100%',width:'100%',borderRadius:999,background:`linear-gradient(90deg,${T.plumDeep},#fc6e62)`}}/>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-around'}}>
+            {['Visual\nAuthenticity','Location\nAccuracy','Digital Proof\nSecured'].map(l=>(
+              <div key={l} style={{display:'flex',alignItems:'center',gap:4}}>
+                <div style={{width:7,height:7,borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>
+                <span style={{fontFamily:'Public Sans',fontSize:9,fontWeight:600,color:T.dark,whiteSpace:'pre',lineHeight:'13px'}}>{l}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Camera controls */}
+        <div style={{position:'absolute',bottom:24,left:0,right:0,display:'flex',alignItems:'center',justifyContent:'center',gap:44}}>
+          <button style={{width:44,height:44,borderRadius:'50%',background:'rgba(236,89,20,.3)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <Ico n="flash" s={18} c={T.orange}/>
+          </button>
+          <button onClick={shoot} style={{width:70,height:70,borderRadius:'50%',background:T.plum,border:`5px solid rgba(145,27,68,.35)`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 28px rgba(145,27,68,.4)'}}>
+            <Ico n="camera" s={24} c="#fff"/>
+          </button>
+          <button style={{width:44,height:44,borderRadius:'50%',background:'rgba(236,89,20,.3)',border:'none',cursor:'pointer',fontSize:18}}>🔄</button>
+        </div>
+      </div>
+      <div style={{padding:'12px 20px 24px',background:'#111018'}}>
+        <button className="btn btn-plum" onClick={()=>nav('completion-summary')} style={{background:T.plum}}>Request Client Verification</button>
+      </div>
+    </div>
+  );
+};
+
+/* ── COMPLETION SUMMARY ── */
+const CompletionSummary=({nav})=>(
+  <div className="screen" style={{background:T.bg}}>
+    <SBar light/>
+    <BackHdr title="Completion Summary" onBack={()=>nav('evidence-log')} light/>
+    <div className="scrollable" style={{flex:1,padding:'0 0 160px'}}>
+      {/* Worker + header */}
+      <div style={{background:'#fff',padding:'16px 20px',marginBottom:12,display:'flex',gap:14,alignItems:'center'}}>
+        <Avatar size={52} seed="J" bg={T.grad}/>
+        <div>
+          <div style={{fontFamily:'Public Sans',fontWeight:900,fontSize:18,letterSpacing:'-.6px',color:T.plum}}>TASK COMPLETED!</div>
+          <div style={{fontFamily:'Public Sans',fontWeight:600,fontSize:13,color:T.orange}}>Please verify the details below</div>
+        </div>
+      </div>
+      <div style={{padding:'0 16px'}}>
+        {/* Before/After */}
+        <div style={{background:'#fff',borderRadius:20,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)',marginBottom:14}}>
+          <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:16,letterSpacing:'-.4px',color:T.dark,marginBottom:12}}>Task Logs</div>
+          <div style={{display:'flex',gap:10}}>
+            {[['BEFORE','🏚️','linear-gradient(135deg,#3c1226,#911b44)'],['AFTER','✨','linear-gradient(135deg,#006c4f,#0891b2)']].map(([label,e,bg])=>(
+              <div key={label} style={{flex:1,height:150,borderRadius:14,background:bg,overflow:'hidden',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <span style={{fontSize:44,opacity:.6}}>{e}</span>
+                <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'8px',textAlign:'center'}}>
+                  <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:12,color:'rgba(255,255,255,.9)',letterSpacing:'1px'}}>{label}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Details */}
+        <div style={{background:'#fff',borderRadius:20,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)',marginBottom:14}}>
+          <div style={{fontFamily:'Public Sans',fontWeight:800,fontSize:15,color:T.dark,marginBottom:12}}>Task Details</div>
+          {[['Service Category','House Cleaning'],['Geo-Coordinate','7.3051 N, 125.6792 E'],['Authentication','100% Secure & Matched'],['Labor Duration','1h 15m (09:00 – 10:15)'],['Total Earned','₱207.00']].map(([k,v],i,a)=>(
+            <div key={k} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:i<a.length-1?`1px solid ${T.border}`:'none'}}>
+              <span style={{fontSize:12,fontWeight:500,color:T.mid}}>{k}</span>
+              <span style={{fontFamily:'Public Sans',fontWeight:700,fontSize:13,color:k==='Total Earned'?T.green:T.plum}}>{v}</span>
+            </div>
+          ))}
+        </div>
+        {/* Rating prompt */}
+        <div style={{background:'#fff',borderRadius:20,padding:'16px',boxShadow:'0 2px 14px rgba(0,0,0,.06)'}}>
+          <div style={{fontFamily:'Public Sans',fontWeight:700,fontSize:14,color:T.dark,marginBottom:10}}>Rate your experience</div>
+          <div style={{display:'flex',justifyContent:'center',gap:8}}>
+            {[1,2,3,4,5].map(s=><Ico key={s} n="star" s={32} c={s<=5?'#f59e0b':'#e2e8f0'}/>)}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'12px 20px 28px',background:`linear-gradient(to top,${T.bg} 75%,transparent)`}}>
+      <p style={{fontFamily:'Public Sans',fontSize:11,color:T.mid,textAlign:'center',marginBottom:10,letterSpacing:'-.5px'}}>*By continuing, you confirm the task is complete.</p>
+      <button className="btn btn-gradient" style={{marginBottom:10,boxShadow:'0 6px 20px rgba(145,27,68,.3)'}} onClick={()=>nav('worker-dash')}>Proceed to Payment</button>
+      <button className="btn btn-ghost">Report a Problem</button>
+    </div>
+  </div>
+);
+
+
+/* ════════════════════════════════════
+   APP ROUTER
+════════════════════════════════════ */
+const SCREENS={
+  welcome:Welcome,signup:SignUp,signin:SignIn,
+  'id-select':IDSelect,'id-scan':IDScan,'id-review':IDReview,'face-scan':FaceScan,'verify-success':VerifySuccess,
+  'resident-dash':ResidentDash,'hirer-map':HirerMap,'create-task':CreateTask,
+  'worker-dash':WorkerDash,'nearby-tasks':NearbyTasks,'task-available':TaskAvailable,'evidence-log':EvidenceLog,'completion-summary':CompletionSummary,
+};
+const LABELS={
+  welcome:'🏠 Welcome',signup:'📝 Sign Up',signin:'🔑 Sign In',
+  'id-select':'🪪 ID Type','id-scan':'📷 ID Scan','id-review':'✅ ID Review','face-scan':'👤 Face Scan','verify-success':'🎉 Verified',
+  'resident-dash':'🏡 Resident','hirer-map':'🗺️ Map','create-task':'📋 Task',
+  'worker-dash':'👷 Worker','nearby-tasks':'📍 Nearby Tasks','task-available':'📢 Alert','evidence-log':'📸 Evidence','completion-summary':'🏁 Complete',
+};
+
+function App(){
+  const [screen,setScreen]=useState('welcome');
+  const nav=useCallback(s=>setScreen(s),[]);
+  const Screen=SCREENS[screen]||Welcome;
+  return(
+    <>
+      <div className="picker">
+        {Object.entries(LABELS).map(([id,label])=>(
+          <button key={id} className={`pick-btn ${screen===id?'active':''}`} onClick={()=>nav(id)}>{label}</button>
+        ))}
+      </div>
+      <div className="phone">
+        <Screen nav={nav} key={screen}/>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -12,10 +12,7 @@ import 'package:kbsync/features/auth/presentation/screens/face_match_result_scre
 class FaceMatchPrototypeScreen extends StatefulWidget {
   final String referenceImagePath;
 
-  const FaceMatchPrototypeScreen({
-    super.key,
-    required this.referenceImagePath,
-  });
+  const FaceMatchPrototypeScreen({super.key, required this.referenceImagePath});
 
   @override
   State<FaceMatchPrototypeScreen> createState() =>
@@ -75,7 +72,10 @@ class _FaceMatchPrototypeScreenState extends State<FaceMatchPrototypeScreen>
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        throw CameraException('NoCameraFound', 'No camera is available on this device.');
+        throw CameraException(
+          'NoCameraFound',
+          'No camera is available on this device.',
+        );
       }
 
       final selected = cameras.firstWhere(
@@ -154,9 +154,10 @@ class _FaceMatchPrototypeScreenState extends State<FaceMatchPrototypeScreen>
 
     final rotation =
         InputImageRotationValue.fromRawValue(description.sensorOrientation) ??
-            InputImageRotation.rotation0deg;
+        InputImageRotation.rotation0deg;
 
-    final format = InputImageFormatValue.fromRawValue(image.format.raw) ??
+    final format =
+        InputImageFormatValue.fromRawValue(image.format.raw) ??
         InputImageFormat.nv21;
 
     final metadata = InputImageMetadata(
@@ -171,7 +172,9 @@ class _FaceMatchPrototypeScreenState extends State<FaceMatchPrototypeScreen>
 
   Future<void> _submitFaceMatch() async {
     final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized || !_isFaceDetected) {
+    if (controller == null ||
+        !controller.value.isInitialized ||
+        !_isFaceDetected) {
       return;
     }
 
@@ -206,9 +209,9 @@ class _FaceMatchPrototypeScreenState extends State<FaceMatchPrototypeScreen>
     } catch (e) {
       if (!mounted) return;
       _didNavigate = false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Face match failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Face match failed: $e')));
     } finally {
       if (mounted &&
           controller.value.isInitialized &&
@@ -237,11 +240,7 @@ class _FaceMatchPrototypeScreenState extends State<FaceMatchPrototypeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Center(
-          child: _buildCameraView(),
-        ),
-      ),
+      body: SafeArea(child: Center(child: _buildCameraView())),
     );
   }
 
@@ -264,7 +263,9 @@ class _FaceMatchPrototypeScreenState extends State<FaceMatchPrototypeScreen>
       );
     }
 
-    if (_isInitializing || controller == null || !controller.value.isInitialized) {
+    if (_isInitializing ||
+        controller == null ||
+        !controller.value.isInitialized) {
       return const SizedBox(
         width: 64,
         height: 64,
@@ -280,16 +281,12 @@ class _FaceMatchPrototypeScreenState extends State<FaceMatchPrototypeScreen>
       return const ColoredBox(color: Color(0xFFE9D9E2));
     }
 
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0),
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: previewSize.height,
-          height: previewSize.width,
-          child: CameraPreview(controller),
-        ),
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: previewSize.height,
+        height: previewSize.width,
+        child: CameraPreview(controller),
       ),
     );
   }

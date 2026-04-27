@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dotenv/dotenv.dart' show DotEnv;
 import 'package:id_verifier_api/src/didit_client.dart';
+import 'package:id_verifier_api/src/firestore_client.dart';
+import 'package:id_verifier_api/src/scan_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
@@ -22,6 +25,32 @@ Future<void> main() async {
   final diditClient = DiditClient(
     apiKey: diditApiKey,
   );
+
+  // Optional: Firestore Admin client for the task entrance/exit scan flow.
+  // Skipped (and the scan endpoints disabled) if no service account file is
+  // configured — this keeps the existing /api/didit/* endpoints usable when
+  // someone is hacking on auth without setting up Firestore credentials.
+  final serviceAccountPath = env['FIRESTORE_SERVICE_ACCOUNT'];
+  FirestoreClient? firestoreClient;
+  TaskScanService? scanService;
+  if (serviceAccountPath != null && serviceAccountPath.isNotEmpty) {
+    try {
+      firestoreClient =
+          await FirestoreClient.fromServiceAccountFile(serviceAccountPath);
+      scanService = TaskScanService(
+        diditClient: diditClient,
+        firestore: firestoreClient,
+      );
+      stdout.writeln('Firestore client ready (project=${firestoreClient.projectId}).');
+    } catch (e) {
+      stderr.writeln('Failed to init Firestore client: $e');
+      stderr.writeln('Task scan endpoints will be disabled.');
+    }
+  } else {
+    stderr.writeln(
+      'FIRESTORE_SERVICE_ACCOUNT not set; /api/task/* endpoints disabled.',
+    );
+  }
 
   final router = Router()
     ..post('/api/didit/id-verification', (Request request) async {
@@ -167,6 +196,20 @@ Future<void> main() async {
         });
       }
     })
+    ..post('/api/task/entrance-scan', (Request request) {
+      return _handleScanRequest(
+        request: request,
+        scanService: scanService,
+        runner: (svc, req) => svc.runEntranceScan(req),
+      );
+    })
+    ..post('/api/task/exit-scan', (Request request) {
+      return _handleScanRequest(
+        request: request,
+        scanService: scanService,
+        runner: (svc, req) => svc.runExitScan(req),
+      );
+    })
     ..get('/health', (Request request) => _jsonResponse(200, {'ok': true}));
 
   final handler = Pipeline()
@@ -191,4 +234,87 @@ Response _jsonResponse(int statusCode, Map<String, dynamic> body) {
       HttpHeaders.contentTypeHeader: ContentType.json.mimeType,
     },
   );
+}
+
+typedef _ScanRunner = Future<TaskScanOutcome> Function(
+  TaskScanService service,
+  TaskScanRequest req,
+);
+
+/// Shared parser + runner for /api/task/entrance-scan and /api/task/exit-scan.
+/// Returns a 503 if the Firestore service-account is not configured.
+Future<Response> _handleScanRequest({
+  required Request request,
+  required TaskScanService? scanService,
+  required _ScanRunner runner,
+}) async {
+  if (scanService == null) {
+    return _jsonResponse(503, {
+      'error':
+          'Task scan endpoints are disabled — FIRESTORE_SERVICE_ACCOUNT not configured.',
+    });
+  }
+
+  try {
+    final body = await request.readAsString();
+    final jsonBody = jsonDecode(body);
+    if (jsonBody is! Map<String, dynamic>) {
+      return _badRequest('Request body must be a JSON object.');
+    }
+
+    final taskId = (jsonBody['taskId'] as String?)?.trim();
+    final workerUid = (jsonBody['workerUid'] as String?)?.trim();
+    final selfieBase64 =
+        (jsonBody['selfieImageBase64'] as String?)?.trim();
+    final lat = jsonBody['lat'];
+    final lng = jsonBody['lng'];
+
+    if (taskId == null || taskId.isEmpty) {
+      return _badRequest('taskId is required.');
+    }
+    if (workerUid == null || workerUid.isEmpty) {
+      return _badRequest('workerUid is required.');
+    }
+    if (selfieBase64 == null || selfieBase64.isEmpty) {
+      return _badRequest('selfieImageBase64 is required.');
+    }
+    if (lat is! num || lng is! num) {
+      return _badRequest('lat and lng must be numbers.');
+    }
+
+    final Uint8List selfieBytes;
+    try {
+      selfieBytes = base64Decode(selfieBase64);
+    } on FormatException {
+      return _badRequest('selfieImageBase64 is not valid base64.');
+    }
+
+    final outcome = await runner(
+      scanService,
+      TaskScanRequest(
+        taskId: taskId,
+        workerUid: workerUid,
+        selfieBytes: selfieBytes,
+        lat: lat.toDouble(),
+        lng: lng.toDouble(),
+      ),
+    );
+
+    final statusCode = switch (outcome.kind) {
+      TaskScanOutcomeKind.passed => 200,
+      TaskScanOutcomeKind.failed => 200, // logical fail, not HTTP fail
+      TaskScanOutcomeKind.locked => 423, // Locked
+      TaskScanOutcomeKind.outOfRange => 200, // logical fail
+      TaskScanOutcomeKind.error => 500,
+    };
+
+    return _jsonResponse(statusCode, outcome.toJson());
+  } on FormatException {
+    return _badRequest('Invalid JSON body.');
+  } catch (e) {
+    stderr.writeln('Scan request failed: $e');
+    return _jsonResponse(500, {
+      'error': 'Internal server error.',
+    });
+  }
 }
