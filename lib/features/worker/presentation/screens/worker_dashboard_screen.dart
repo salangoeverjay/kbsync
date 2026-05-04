@@ -5,9 +5,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:kbsync/core/routing/app_routes.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
+import 'package:kbsync/core/constants.dart';
 import 'package:kbsync/features/auth/data/firebase_auth_service.dart';
+import 'package:kbsync/features/worker/data/worker_active_task_service.dart';
+import 'package:kbsync/features/worker/data/worker_lockout_service.dart';
 import 'package:kbsync/features/worker/data/worker_presence_service.dart';
 import 'package:kbsync/features/worker/data/worker_task_feed_service.dart';
+import 'package:kbsync/features/worker/presentation/widgets/active_task_banner.dart';
+import 'package:kbsync/features/worker/presentation/widgets/worker_lockout_banner.dart';
 import 'package:kbsync/core/widgets/kb_bottom_nav.dart';
 import 'package:kbsync/core/widgets/kb_buttons.dart';
 import 'package:kbsync/core/widgets/progress_ring.dart';
@@ -24,7 +29,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   final FirebaseAuthService _authService = FirebaseAuthService();
   final WorkerPresenceService _presenceService = WorkerPresenceService();
   final WorkerTaskFeedService _taskFeedService = WorkerTaskFeedService();
-  Future<void>? _presenceInitFuture;
+  final WorkerLockoutService _lockoutService = WorkerLockoutService();
+  final WorkerActiveTaskService _activeTaskService = WorkerActiveTaskService();
   late final Future<String?> _fullNameFuture = _authService
       .getCurrentUserFullName();
 
@@ -33,7 +39,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _presenceInitFuture = _presenceService.setOnline(_online);
+    unawaited(_presenceService.setOnline(_online));
   }
 
   @override
@@ -63,13 +69,43 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   Widget _buildDashboardContent({
     required _WorkerDashboardProfile profile,
     required List<WorkerOpenTask> openTasks,
+    required WorkerLockoutState lockoutState,
+    required List<WorkerActiveTask> activeTasks,
   }) {
     final highlightedTask = openTasks.isEmpty ? null : openTasks.first;
+    final locked = lockoutState.isLocked();
+    final activeTask = activeTasks.isEmpty ? null : activeTasks.first;
+
+    void showLockoutSnack() {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You are temporarily locked out from accepting tasks.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFFB91C1C),
+        ),
+      );
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
         children: [
+          if (locked)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: WorkerLockoutBanner(state: lockoutState),
+            ),
+          if (activeTask != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ActiveTaskBanner(
+                task: activeTask,
+                onCancel: () => _activeTaskService.cancelActiveTask(
+                  taskId: activeTask.id,
+                  ownerId: activeTask.ownerId,
+                ),
+              ),
+            ),
           _TrustEarningsRow(profile: profile),
           const SizedBox(height: 20),
           _WalletCard(
@@ -80,21 +116,32 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ),
           const SizedBox(height: 12),
           if (_online && highlightedTask != null) ...[
-            _TaskAlertCard(
-              task: highlightedTask,
-              onTap: () => Navigator.of(
-                context,
-              ).pushNamed(AppRoutes.taskAvailable, arguments: highlightedTask),
+            Opacity(
+              opacity: locked ? 0.5 : 1.0,
+              child: _TaskAlertCard(
+                task: highlightedTask,
+                onTap: locked
+                    ? showLockoutSnack
+                    : () => Navigator.of(context).pushNamed(
+                        AppRoutes.taskAvailable,
+                        arguments: highlightedTask,
+                      ),
+              ),
             ),
             const SizedBox(height: 10),
           ],
-          _BrowseTasksCard(
-            availableCount: openTasks.length,
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.nearbyTasks),
+          Opacity(
+            opacity: locked ? 0.5 : 1.0,
+            child: _BrowseTasksCard(
+              availableCount: openTasks.length,
+              onTap: locked
+                  ? showLockoutSnack
+                  : () =>
+                        Navigator.of(context).pushNamed(AppRoutes.nearbyTasks),
+            ),
           ),
           const SizedBox(height: 20),
-          const _WeeklyEarningsChart(),
-          const SizedBox(height: 20),
+          // Weekly earnings moved to wallet screen
           _RookieStatus(completedTasks: profile.completedTasks),
           const SizedBox(height: 20),
           _RecentTasksList(tasks: openTasks.take(3).toList(growable: false)),
@@ -143,18 +190,39 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     return _buildDashboardContent(
                       profile: _WorkerDashboardProfile.empty,
                       openTasks: openTasks,
+                      lockoutState: WorkerLockoutState.empty,
+                      activeTasks: const <WorkerActiveTask>[],
                     );
                   }
 
-                  return StreamBuilder<_WorkerDashboardProfile>(
-                    stream: _profileStream(uid),
-                    initialData: _WorkerDashboardProfile.empty,
-                    builder: (context, profileSnapshot) {
-                      final profile =
-                          profileSnapshot.data ?? _WorkerDashboardProfile.empty;
-                      return _buildDashboardContent(
-                        profile: profile,
-                        openTasks: openTasks,
+                  return StreamBuilder<List<WorkerActiveTask>>(
+                    stream: _activeTaskService.watchActiveTasks(uid),
+                    initialData: const <WorkerActiveTask>[],
+                    builder: (context, activeSnapshot) {
+                      final activeTasks =
+                          activeSnapshot.data ?? const <WorkerActiveTask>[];
+                      return StreamBuilder<WorkerLockoutState>(
+                        stream: _lockoutService.watchLockout(uid),
+                        initialData: WorkerLockoutState.empty,
+                        builder: (context, lockoutSnapshot) {
+                          final lockoutState =
+                              lockoutSnapshot.data ?? WorkerLockoutState.empty;
+                          return StreamBuilder<_WorkerDashboardProfile>(
+                            stream: _profileStream(uid),
+                            initialData: _WorkerDashboardProfile.empty,
+                            builder: (context, profileSnapshot) {
+                              final profile =
+                                  profileSnapshot.data ??
+                                  _WorkerDashboardProfile.empty;
+                              return _buildDashboardContent(
+                                profile: profile,
+                                openTasks: openTasks,
+                                lockoutState: lockoutState,
+                                activeTasks: activeTasks,
+                              );
+                            },
+                          );
+                        },
                       );
                     },
                   );
@@ -742,7 +810,7 @@ class _BrowseTasksCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '$availableCount tasks available within 2km',
+                    '$availableCount tasks available within ${(kNearbyRadiusMeters / 1000).toInt()}km',
                     style: TextStyle(fontSize: 12, color: AppColors.mid),
                   ),
                 ],
@@ -755,105 +823,6 @@ class _BrowseTasksCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _WeeklyEarningsChart extends StatelessWidget {
-  const _WeeklyEarningsChart();
-
-  static const _days = [
-    (d: 'Mon', v: 0.40),
-    (d: 'Tue', v: 0.65),
-    (d: 'Wed', v: 0.50),
-    (d: 'Thu', v: 0.80),
-    (d: 'Fri', v: 1.00),
-    (d: 'Sat', v: 0.75),
-    (d: 'Sun', v: 0.45),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Weekly Earnings',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  color: AppColors.ink,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const Text(
-                '₱1,035 this week',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.plum,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 80,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: _days.asMap().entries.map((e) {
-                final isFri = e.key == 4;
-                return Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Flexible(
-                        child: FractionallySizedBox(
-                          heightFactor: e.value.v,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                            decoration: BoxDecoration(
-                              gradient: isFri ? AppColors.grad : null,
-                              color: isFri
-                                  ? null
-                                  : AppColors.plum.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        e.value.d,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: isFri ? AppColors.plum : AppColors.mid,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
       ),
     );
   }

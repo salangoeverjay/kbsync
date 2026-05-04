@@ -109,15 +109,15 @@ class _WorkerLockoutBannerState extends State<WorkerLockoutBanner> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'You are locked out for $readableLabel',
-                  style: TextStyle(
+                Text(
+                  'Locked out for $readable',
+                  style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                     color: Color(0xFFB91C1C),
                     letterSpacing: -0.2,
                   ),
-                ).copyWithText('You are locked out for $readable'),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   'Three failed identity scans triggered a 5-hour cool-down. '
@@ -136,16 +136,3 @@ class _WorkerLockoutBannerState extends State<WorkerLockoutBanner> {
     );
   }
 }
-
-// Sentinel placeholder used so the const Text above can be a single
-// expression while we substitute the runtime label. Dart prevents direct
-// interpolation in const contexts; this tiny extension keeps the literal
-// styled and replaces the text at the call site.
-const _readablePlaceholder = 'You are locked out for ';
-extension _TextRebuild on Text {
-  Text copyWithText(String text) {
-    return Text(text, style: style, textAlign: textAlign);
-  }
-}
-
-const String readableLabel = _readablePlaceholder; // referenced above

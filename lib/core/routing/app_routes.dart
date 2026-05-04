@@ -13,8 +13,12 @@ class AppRoutes {
   static const nearbyTasks = '/nearby-tasks';
   static const taskAvailable = '/task-available';
   static const evidenceLog = '/evidence-log';
+  static const taskScan = '/task-scan';
   static const completionSummary = '/completion-summary';
   static const profile = '/profile';
   static const wallet = '/wallet';
   static const walletCashIn = '/wallet/cash-in';
+  static const walletTransfer = '/wallet/transfer';
+  static const adminTransactions = '/admin/transactions';
+  static const adminWallet = '/admin/wallet';
 }

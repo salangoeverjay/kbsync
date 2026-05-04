@@ -5,11 +5,13 @@ class NearbyWorkerMarker {
   final String uid;
   final String name;
   final LatLng position;
+  final double? rating;
 
   const NearbyWorkerMarker({
     required this.uid,
     required this.name,
     required this.position,
+    required this.rating,
   });
 }
 
@@ -40,6 +42,7 @@ class NearbyWorkerService {
             }
 
             final fullName = (data['fullName'] as String?)?.trim();
+            final rating = _extractRating(data);
             workers.add(
               NearbyWorkerMarker(
                 uid: doc.id,
@@ -47,6 +50,7 @@ class NearbyWorkerService {
                     ? 'Worker'
                     : fullName,
                 position: position,
+                rating: rating,
               ),
             );
           }
@@ -68,6 +72,14 @@ class NearbyWorkerService {
       return LatLng(latitude.toDouble(), longitude.toDouble());
     }
 
+    return null;
+  }
+
+  double? _extractRating(Map<String, dynamic> data) {
+    final rating =
+        data['rating'] ?? data['averageRating'] ?? data['workerRating'];
+    if (rating is num) return rating.toDouble();
+    if (rating is String) return double.tryParse(rating);
     return null;
   }
 }

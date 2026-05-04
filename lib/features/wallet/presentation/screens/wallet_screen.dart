@@ -148,36 +148,6 @@ class _WalletScreenState extends State<WalletScreen> {
         .fold<double>(0, (sum, t) => sum + t.amount);
   }
 
-  List<(String, double)> _weeklyBars(List<WalletTransaction> txns) {
-    final now = DateTime.now();
-    final startOfWeek = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).subtract(Duration(days: now.weekday - 1));
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final totals = List<double>.filled(7, 0);
-
-    for (final tx in txns) {
-      if (tx.isCredit) continue;
-      final day = DateTime(
-        tx.createdAt.year,
-        tx.createdAt.month,
-        tx.createdAt.day,
-      );
-      final diff = day.difference(startOfWeek).inDays;
-      if (diff >= 0 && diff < 7) {
-        totals[diff] += tx.amount;
-      }
-    }
-
-    final max = totals.fold<double>(0, (m, e) => e > m ? e : m);
-    return List<(String, double)>.generate(7, (i) {
-      final factor = max <= 0 ? 0.1 : (totals[i] / max).clamp(0.1, 1.0);
-      return (labels[i], factor);
-    });
-  }
-
   IconData _transactionIcon(WalletTransaction t) {
     if (t.category == 'cash_in') return Icons.add_rounded;
     if (t.category == 'pabili' || t.title.toLowerCase().contains('grocery')) {
@@ -235,8 +205,6 @@ class _WalletScreenState extends State<WalletScreen> {
             builder: (context, txSnapshot) {
               final txns = txSnapshot.data ?? const <WalletTransaction>[];
               final monthlySpent = _monthlySpent(txns);
-              final bars = _weeklyBars(txns);
-
               return Column(
                 children: [
                   _WalletHeader(onBack: () => Navigator.of(context).pop()),
@@ -253,11 +221,6 @@ class _WalletScreenState extends State<WalletScreen> {
                           ),
                           const SizedBox(height: 20),
                           const _QuickActions(),
-                          const SizedBox(height: 24),
-                          _MonthlyCard(
-                            totalLabel: _formatCurrency(monthlySpent),
-                            bars: bars,
-                          ),
                           const SizedBox(height: 24),
                           _TransactionHistory(
                             transactions: txns,
@@ -453,15 +416,6 @@ class _BalanceSection extends StatelessWidget {
                 labelColor: AppColors.orange,
                 valueColor: AppColors.orange,
               ),
-              const SizedBox(height: 10),
-              _MiniCard(
-                label: 'This Month',
-                value: monthlyLabel,
-                icon: Icons.receipt_long_rounded,
-                bg: AppColors.plum.withValues(alpha: 0.08),
-                labelColor: AppColors.plum,
-                valueColor: AppColors.plum,
-              ),
             ],
           ),
         ),
@@ -532,45 +486,48 @@ class _QuickActions extends StatelessWidget {
     const actions = [
       (Icons.add_rounded, 'Cash In', AppColors.orange),
       (Icons.send_rounded, 'Send', AppColors.plum),
-      (Icons.qr_code_rounded, 'Pay', AppColors.plum),
-      (Icons.history_rounded, 'History', AppColors.plum),
     ];
+
     return Row(
-      children: actions.map((a) {
-        return Expanded(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: actions.asMap().entries.map((entry) {
+        final a = entry.value;
+        return Padding(
+          padding: EdgeInsets.only(left: entry.key == 0 ? 0 : 18),
           child: GestureDetector(
             onTap: () {
               if (a.$2 == 'Cash In') {
                 Navigator.of(context).pushNamed(AppRoutes.walletCashIn);
+              } else if (a.$2 == 'Send') {
+                Navigator.of(context).pushNamed(AppRoutes.walletTransfer);
               }
             },
             child: Column(
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 68,
+                  height: 68,
                   decoration: BoxDecoration(
                     color: a.$3 == AppColors.orange
                         ? AppColors.orange
                         : AppColors.plum.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(
                     a.$1,
-                    size: 22,
+                    size: 28,
                     color: a.$3 == AppColors.orange
                         ? Colors.white
                         : AppColors.plum,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   a.$2,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppColors.ink,
-                    letterSpacing: 0.1,
                   ),
                 ),
               ],
@@ -582,102 +539,7 @@ class _QuickActions extends StatelessWidget {
   }
 }
 
-class _MonthlyCard extends StatelessWidget {
-  final String totalLabel;
-  final List<(String, double)> bars;
-
-  const _MonthlyCard({required this.totalLabel, required this.bars});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Spending This Week',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  color: AppColors.ink,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              Text(
-                '$totalLabel total',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.plum.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 72,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: bars.asMap().entries.map((e) {
-                final isFri = e.key == 4;
-                return Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: FractionallySizedBox(
-                            heightFactor: e.value.$2,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: isFri ? AppColors.grad : null,
-                                color: isFri
-                                    ? null
-                                    : AppColors.plum.withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        e.value.$1,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: isFri ? AppColors.plum : AppColors.mid,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TransactionHistory extends StatelessWidget {
+class _TransactionHistory extends StatefulWidget {
   final List<WalletTransaction> transactions;
   final String Function(double value, bool isCredit) formatSignedAmount;
   final String Function(DateTime value) formatDateTime;
@@ -693,7 +555,26 @@ class _TransactionHistory extends StatelessWidget {
   });
 
   @override
+  State<_TransactionHistory> createState() => _TransactionHistoryState();
+}
+
+class _TransactionHistoryState extends State<_TransactionHistory> {
+  static const int _collapsedCount = 5;
+  bool _expanded = false;
+
+  void _toggleExpanded() {
+    setState(() {
+      _expanded = !_expanded;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final visibleTransactions = _expanded
+        ? widget.transactions
+        : widget.transactions.take(_collapsedCount).toList();
+    final canToggle = widget.transactions.length > _collapsedCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -710,137 +591,141 @@ class _TransactionHistory extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: canToggle ? _toggleExpanded : null,
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text(
-                'View all',
+              child: Text(
+                _expanded ? 'Show less' : 'View all',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.orange,
+                  color: canToggle ? AppColors.orange : AppColors.mid,
                 ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 14,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: transactions.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 20, 16, 20),
-                  child: Center(
-                    child: Text(
-                      'No transactions yet',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.mid,
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 14,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: visibleTransactions.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 20, 16, 20),
+                    child: Center(
+                      child: Text(
+                        'No transactions yet',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.mid,
+                        ),
                       ),
                     ),
-                  ),
-                )
-              : Column(
-                  children: transactions.asMap().entries.map((e) {
-                    final i = e.key;
-                    final t = e.value;
-                    final isCredit = t.isCredit;
-                    return Container(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                      decoration: BoxDecoration(
-                        border: i < transactions.length - 1
-                            ? Border(
-                                bottom: BorderSide(color: AppColors.border),
-                              )
-                            : null,
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: isCredit
-                                  ? AppColors.green.withValues(alpha: 0.1)
-                                  : AppColors.orangeLt,
-                              borderRadius: BorderRadius.circular(13),
-                            ),
-                            child: Center(
-                              child: Text(
-                                resolveEmoji(t),
-                                style: const TextStyle(fontSize: 20),
+                  )
+                : Column(
+                    children: visibleTransactions.asMap().entries.map((e) {
+                      final i = e.key;
+                      final t = e.value;
+                      final isCredit = t.isCredit;
+                      return Container(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                        decoration: BoxDecoration(
+                          border: i < visibleTransactions.length - 1
+                              ? Border(
+                                  bottom: BorderSide(color: AppColors.border),
+                                )
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: isCredit
+                                    ? AppColors.green.withValues(alpha: 0.1)
+                                    : AppColors.orangeLt,
+                                borderRadius: BorderRadius.circular(13),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  widget.resolveEmoji(t),
+                                  style: const TextStyle(fontSize: 20),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    t.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                      color: AppColors.ink,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    t.subtitle,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.ink.withValues(
+                                        alpha: 0.45,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  t.title,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
+                                  widget.formatSignedAmount(t.amount, isCredit),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
                                     fontSize: 13,
-                                    color: AppColors.ink,
+                                    color: isCredit
+                                        ? AppColors.green
+                                        : AppColors.ink,
+                                    letterSpacing: -0.3,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  t.subtitle,
+                                  widget.formatDateTime(t.createdAt),
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.ink.withValues(
-                                      alpha: 0.45,
-                                    ),
+                                    fontSize: 10,
+                                    color: AppColors.ink.withValues(alpha: 0.4),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                formatSignedAmount(t.amount, isCredit),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                  color: isCredit
-                                      ? AppColors.green
-                                      : AppColors.ink,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                formatDateTime(t.createdAt),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.ink.withValues(alpha: 0.4),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+          ),
         ),
       ],
     );

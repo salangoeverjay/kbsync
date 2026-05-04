@@ -16,9 +16,13 @@ import 'package:kbsync/features/worker/presentation/screens/completion_summary_s
 import 'package:kbsync/features/worker/presentation/screens/evidence_log_screen.dart';
 import 'package:kbsync/features/worker/presentation/screens/nearby_tasks_screen.dart';
 import 'package:kbsync/features/worker/presentation/screens/task_available_screen.dart';
+import 'package:kbsync/features/worker/presentation/screens/task_scan_screen.dart';
 import 'package:kbsync/features/wallet/presentation/screens/cash_in_screen.dart';
+import 'package:kbsync/features/wallet/presentation/screens/transfer_screen.dart';
 import 'package:kbsync/features/wallet/presentation/screens/wallet_screen.dart';
 import 'package:kbsync/features/worker/presentation/screens/worker_dashboard_screen.dart';
+import 'package:kbsync/features/admin/presentation/screens/admin_transactions_screen.dart';
+import 'package:kbsync/features/admin/presentation/screens/admin_wallet_screen.dart';
 
 class KbSyncApp extends StatelessWidget {
   const KbSyncApp({super.key});
@@ -60,10 +64,23 @@ class KbSyncApp extends StatelessWidget {
         AppRoutes.nearbyTasks: (_) => const NearbyTasksScreen(),
         AppRoutes.taskAvailable: (_) => const TaskAvailableScreen(),
         AppRoutes.evidenceLog: (_) => const EvidenceLogScreen(),
+        AppRoutes.taskScan: (ctx) {
+          final args =
+              ModalRoute.of(ctx)?.settings.arguments as TaskScanScreenArgs?;
+          if (args == null) {
+            return const Scaffold(
+              body: Center(child: Text('Missing scan arguments.')),
+            );
+          }
+          return TaskScanScreen(args: args);
+        },
         AppRoutes.completionSummary: (_) => const CompletionSummaryScreen(),
         AppRoutes.profile: (_) => const ProfileScreen(),
         AppRoutes.wallet: (_) => const WalletScreen(),
         AppRoutes.walletCashIn: (_) => const CashInScreen(),
+        AppRoutes.walletTransfer: (_) => const TransferScreen(),
+        AppRoutes.adminTransactions: (_) => const AdminTransactionsScreen(),
+        AppRoutes.adminWallet: (_) => const AdminWalletScreen(),
       },
     );
   }

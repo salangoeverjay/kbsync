@@ -1,10 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
 import 'package:kbsync/core/widgets/kb_buttons.dart';
-import 'package:kbsync/features/wallet/data/paymongo_service.dart';
 import 'package:kbsync/features/wallet/data/wallet_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,13 +16,8 @@ class CashInScreen extends StatefulWidget {
 class _CashInScreenState extends State<CashInScreen> {
   final TextEditingController _amountController = TextEditingController();
   final WalletService _walletService = WalletService();
-  final PaymongoService _paymongoService = PaymongoService();
   static const _quickAmounts = [100, 200, 500, 1000, 2000, 5000];
   static const _sourceFee = 0;
-  static const _paymongoSourceTypes = <String, String>{
-    'gcash': 'gcash',
-    'maya': 'paymaya',
-  };
 
   bool _waitingForRedirect = false;
 
@@ -129,42 +122,69 @@ class _CashInScreenState extends State<CashInScreen> {
     }
 
     final sourceName = _sources.firstWhere((s) => s.id == _selectedSource).name;
-    final paymongoType = _paymongoSourceTypes[_selectedSource];
-
-    if (paymongoType == null) {
-      // Bank / OTC are not wired through PayMongo in this test build —
-      // fall back to the existing instant-credit demo path.
-      await _runMockCredit(uid: uid, sourceName: sourceName);
-      return;
-    }
 
     setState(() => _waitingForRedirect = true);
     try {
-      final result = await _paymongoService.createCashInSource(
-        amountPesos: _amount.toDouble(),
-        sourceType: paymongoType,
-      );
+      // Determine the app URL based on selected source
+      late String appUrl;
+      late String appName;
 
-      final url = result.checkoutUrl;
-      if (url == null || url.isEmpty) {
-        throw StateError('PayMongo did not return a checkout URL.');
+      switch (_selectedSource) {
+        case 'gcash':
+          appUrl = 'https://www.gcash.com/';
+          appName = 'GCash';
+          break;
+        case 'maya':
+          appUrl = 'https://www.mayaapp.com/';
+          appName = 'Maya';
+          break;
+        case 'bank':
+          appName = 'Bank Transfer';
+          // Show instructions instead
+          if (!mounted) return;
+          _showBankTransferInstructions();
+          return;
+        case 'over_the_counter':
+          appName = 'Over-the-Counter';
+          // Show OTC instructions instead
+          if (!mounted) return;
+          _showOtcInstructions();
+          return;
+        default:
+          throw StateError('Unknown payment source: $_selectedSource');
       }
 
+      // Record the pending cash-in transaction
+      await _walletService.recordCashIn(
+        uid: uid,
+        amount: _amount.toDouble(),
+        sourceName: sourceName,
+      );
+
+      // Open the payment app
       final launched = await launchUrl(
-        Uri.parse(url),
+        Uri.parse(appUrl),
         mode: LaunchMode.externalApplication,
       );
+
       if (!launched) {
-        throw StateError('Could not open the PayMongo checkout page.');
+        throw StateError('Could not open $appName.');
       }
 
       if (!mounted) return;
-      _showWaitingSheet(uid: uid, sourceId: result.sourceId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Opening $appName to complete ₱$_amount cash-in...'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.plum,
+        ),
+      );
+      Navigator.of(context).pop();
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cash in failed: $err')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Cash in failed: $err')));
     } finally {
       if (mounted) {
         setState(() => _waitingForRedirect = false);
@@ -172,71 +192,119 @@ class _CashInScreenState extends State<CashInScreen> {
     }
   }
 
-  Future<void> _runMockCredit({
-    required String uid,
-    required String sourceName,
-  }) async {
-    try {
-      await _walletService.recordCashIn(
-        uid: uid,
-        amount: _amount.toDouble(),
-        sourceName: sourceName,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cash in of ${_formatPeso(_amount)} successful.'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.plum,
+  void _showBankTransferInstructions() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Bank Transfer'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Send ₱$_amount to:',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Bank: BPI / BDO / UnionBank',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Account: Ka-Bayan Sync',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Amount: ₱$_amount',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Your wallet will be credited within 1-2 hours.',
+              style: TextStyle(fontSize: 11, color: AppColors.ink),
+            ),
+          ],
         ),
-      );
-      Navigator.of(context).pop();
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to process cash in. Please try again.'),
-        ),
-      );
-    }
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Understood'),
+          ),
+        ],
+      ),
+    );
   }
 
-  void _showWaitingSheet({required String uid, required String sourceId}) {
-    showModalBottomSheet<void>(
+  void _showOtcInstructions() {
+    showDialog<void>(
       context: context,
-      isDismissible: false,
-      enableDrag: false,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetCtx) {
-        final stream = FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .collection('paymongo_sources')
-            .doc(sourceId)
-            .snapshots();
-        return _WaitingSheet(
-          stream: stream,
-          formattedAmount: _formatPeso(_amount),
-          onClose: () {
-            Navigator.of(sheetCtx).pop();
-          },
-          onCredited: () {
-            Navigator.of(sheetCtx).pop();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content:
-                      Text('Cash in of ${_formatPeso(_amount)} confirmed.'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: AppColors.plum,
-                ),
-              );
-              Navigator.of(context).pop();
-            }
-          },
-        );
-      },
+      builder: (ctx) => AlertDialog(
+        title: const Text('Over-the-Counter'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Visit any of these outlets:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('• 7-Eleven', style: TextStyle(fontSize: 12)),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '• Cebuana Lhuillier',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text('• M Lhuillier', style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Reference: Ka-Bayan Sync | Amount: ₱$_amount',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Your wallet will be credited within 2-4 hours.',
+              style: TextStyle(fontSize: 11, color: AppColors.ink),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -286,7 +354,7 @@ class _CashInScreenState extends State<CashInScreen> {
               ),
               const SizedBox(height: 12),
               KbGradientButton(
-                text: _waitingForRedirect ? 'Opening PayMongo…' : 'Continue',
+                text: _waitingForRedirect ? 'Opening app…' : 'Continue',
                 onTap: (_canContinue && !_waitingForRedirect)
                     ? _onContinue
                     : null,
@@ -869,116 +937,6 @@ class _ConfirmSheet extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _WaitingSheet extends StatefulWidget {
-  final Stream<DocumentSnapshot<Map<String, dynamic>>> stream;
-  final String formattedAmount;
-  final VoidCallback onClose;
-  final VoidCallback onCredited;
-
-  const _WaitingSheet({
-    required this.stream,
-    required this.formattedAmount,
-    required this.onClose,
-    required this.onCredited,
-  });
-
-  @override
-  State<_WaitingSheet> createState() => _WaitingSheetState();
-}
-
-class _WaitingSheetState extends State<_WaitingSheet> {
-  bool _credited = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: widget.stream,
-      builder: (context, snap) {
-        final data = snap.data?.data();
-        final creditedAt = data?['creditedAt'];
-        if (!_credited && creditedAt != null) {
-          _credited = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) widget.onCredited();
-          });
-        }
-
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.ink.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppColors.orange,
-                        ),
-                        backgroundColor:
-                            AppColors.orange.withValues(alpha: 0.15),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Waiting for payment',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              color: AppColors.ink,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Complete the ${widget.formattedAmount} cash in on the PayMongo page. Your wallet updates automatically once it clears.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              height: 1.4,
-                              color: AppColors.ink.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                KbGhostButton(text: 'Close', onTap: widget.onClose),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

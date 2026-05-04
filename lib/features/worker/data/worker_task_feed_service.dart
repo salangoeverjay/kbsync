@@ -9,7 +9,9 @@ class WorkerOpenTask {
   final List<String> areas;
   final String notes;
   final List<String> groceryItems;
+  final List<String> cleaningTargets;
   final double? groceryBudget;
+  final String referencePhotoUrl;
   final String paymentProtocol;
   final String merchantQrPayload;
   final String icon;
@@ -27,7 +29,9 @@ class WorkerOpenTask {
     required this.areas,
     required this.notes,
     required this.groceryItems,
+    required this.cleaningTargets,
     required this.groceryBudget,
+    required this.referencePhotoUrl,
     required this.paymentProtocol,
     required this.merchantQrPayload,
     required this.icon,
@@ -123,7 +127,15 @@ class WorkerOpenTask {
               .where((value) => value.isNotEmpty)
               .toList(growable: false) ??
           const <String>[],
+      cleaningTargets:
+          (data['cleaningTargets'] as List?)
+              ?.whereType<String>()
+              .map((value) => value.trim())
+              .where((value) => value.isNotEmpty)
+              .toList(growable: false) ??
+          const <String>[],
       groceryBudget: (data['groceryBudget'] as num?)?.toDouble(),
+      referencePhotoUrl: (data['referencePhotoUrl'] as String?)?.trim() ?? '',
       paymentProtocol:
           (data['paymentProtocol'] as String?)?.trim() ?? 'cash_or_wallet',
       merchantQrPayload: (data['merchantQrPayload'] as String?)?.trim() ?? '',
@@ -141,6 +153,39 @@ class WorkerTaskFeedService {
 
   WorkerTaskFeedService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  /// Marks `tasks/{taskId}` as accepted by [workerUid] and assigns the
+  /// `worker` field. Mirrors the change to the resident's per-user copy
+  /// at `users/{ownerId}/active_tasks/{taskId}` so the resident dashboard
+  /// reflects the assignment.
+  ///
+  /// The status stays `Open` until the worker passes the entrance scan;
+  /// `TaskScanService` (backend) flips it to `In Progress` then.
+  Future<void> acceptTask({
+    required String taskId,
+    required String workerUid,
+    required String workerName,
+    required String ownerId,
+  }) async {
+    final batch = _firestore.batch();
+    final tasksRoot = _firestore.collection('tasks').doc(taskId);
+    final residentCopy = _firestore
+        .collection('users')
+        .doc(ownerId)
+        .collection('active_tasks')
+        .doc(taskId);
+
+    final payload = <String, dynamic>{
+      'worker': workerName,
+      'workerUid': workerUid,
+      'acceptedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    batch.set(tasksRoot, payload, SetOptions(merge: true));
+    batch.set(residentCopy, payload, SetOptions(merge: true));
+    await batch.commit();
+  }
 
   Stream<List<WorkerOpenTask>> watchOpenTasks() {
     return _firestore.collection('tasks').snapshots().map((snapshot) {

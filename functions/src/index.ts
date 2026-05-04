@@ -15,6 +15,9 @@ initializeApp({
 });
 const db = getFirestore();
 
+// Register additional function modules after Admin SDK initialization.
+require("./createDefaultAdmin");
+
 // Reads keys from environment variables. For local emulator runs, set them
 // in functions/.env (gitignored). For Blaze deploys, prefer Secret Manager
 // via `firebase functions:secrets:set` and switch back to defineSecret().
@@ -281,6 +284,108 @@ export const createTaskQrPayment = onCall(
       qrCodeData: intent.qrCodeData,
       status: intent.status,
     };
+  },
+);
+
+/**
+ * Create a PayMongo Payout for wallet transfers.
+ * Sends money to user's GCash, Maya, or Bank account.
+ */
+export const createPayout = onCall(
+  { region: REGION },
+  async (req) => {
+    const uid = resolveUid(req);
+    const data = req.data ?? {};
+    const amount = validateAmount(data.amountPesos, 1);
+    const method = typeof data.method === "string" ? data.method : "gcash";
+    const recipient = typeof data.recipient === "string" ? data.recipient : "";
+    const description = typeof data.description === "string" ? data.description : "KBSync Wallet Transfer";
+
+    if (!recipient) {
+      throw new HttpsError("invalid-argument", "recipient is required.");
+    }
+
+    if (process.env.FUNCTIONS_EMULATOR === "true") {
+      const payoutId = `mock_payout_${Date.now()}`;
+      const batch = db.batch();
+      const userRef = db.collection("users").doc(uid);
+      const txRef = userRef.collection("wallet_transactions").doc();
+
+      batch.set(
+        userRef,
+        {
+          walletBalance: FieldValue.increment(-amount),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      batch.set(txRef, {
+        title: `Transfer to ${method}`,
+        amount,
+        isCredit: false,
+        category: "transfer",
+        method,
+        recipient,
+        payoutId,
+        status: "mock_completed",
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      return {
+        payoutId,
+        status: "mock_completed",
+        amount,
+      };
+    }
+
+    try {
+      const payout = await client().createPayout({
+        amountCentavos: pesosToCentavos(amount),
+        method,
+        recipient,
+        description,
+      });
+
+      const payoutId = (payout as { data?: { id?: string } }).data?.id ?? "unknown";
+      const batch = db.batch();
+      const userRef = db.collection("users").doc(uid);
+      const txRef = userRef.collection("wallet_transactions").doc();
+
+      batch.set(
+        userRef,
+        {
+          walletBalance: FieldValue.increment(-amount),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      batch.set(txRef, {
+        title: `Transfer to ${method}`,
+        amount,
+        isCredit: false,
+        category: "transfer",
+        method,
+        recipient,
+        payoutId,
+        status: "processing",
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      return {
+        payoutId,
+        status: "processing",
+        amount,
+      };
+    } catch (error) {
+      logger.error("Payout creation failed", error);
+      throw new HttpsError("internal", "Failed to process payout");
+    }
   },
 );
 

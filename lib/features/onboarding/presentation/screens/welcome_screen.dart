@@ -7,7 +7,8 @@ class NeighborhoodWelcomeScreen extends StatefulWidget {
   const NeighborhoodWelcomeScreen({super.key});
 
   @override
-  State<NeighborhoodWelcomeScreen> createState() => _NeighborhoodWelcomeScreenState();
+  State<NeighborhoodWelcomeScreen> createState() =>
+      _NeighborhoodWelcomeScreenState();
 }
 
 class _NeighborhoodWelcomeScreenState extends State<NeighborhoodWelcomeScreen>
@@ -22,22 +23,31 @@ class _NeighborhoodWelcomeScreenState extends State<NeighborhoodWelcomeScreen>
   @override
   void initState() {
     super.initState();
-    _orb1Ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))
-      ..repeat(reverse: true);
-    _orb2Ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 5000))
-      ..repeat(reverse: true);
-    _heroCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 3))
-      ..repeat(reverse: true);
+    _orb1Ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+    _orb2Ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 5000),
+    )..repeat(reverse: true);
+    _heroCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
 
-    _orb1 = Tween<double>(begin: 0, end: -8).animate(
-      CurvedAnimation(parent: _orb1Ctrl, curve: Curves.easeInOut),
-    );
-    _orb2 = Tween<double>(begin: 0, end: -8).animate(
-      CurvedAnimation(parent: _orb2Ctrl, curve: Curves.easeInOut),
-    );
-    _hero = Tween<double>(begin: 0, end: -8).animate(
-      CurvedAnimation(parent: _heroCtrl, curve: Curves.easeInOut),
-    );
+    _orb1 = Tween<double>(
+      begin: 0,
+      end: -8,
+    ).animate(CurvedAnimation(parent: _orb1Ctrl, curve: Curves.easeInOut));
+    _orb2 = Tween<double>(
+      begin: 0,
+      end: -8,
+    ).animate(CurvedAnimation(parent: _orb2Ctrl, curve: Curves.easeInOut));
+    _hero = Tween<double>(
+      begin: 0,
+      end: -8,
+    ).animate(CurvedAnimation(parent: _heroCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -78,9 +88,7 @@ class _NeighborhoodWelcomeScreenState extends State<NeighborhoodWelcomeScreen>
             ),
           ),
           // Grid pattern
-          Positioned.fill(
-            child: CustomPaint(painter: _GridPainter()),
-          ),
+          Positioned.fill(child: CustomPaint(painter: _GridPainter())),
           // Floating orb 1 — top right
           AnimatedBuilder(
             animation: _orb1,
@@ -129,20 +137,30 @@ class _NeighborhoodWelcomeScreenState extends State<NeighborhoodWelcomeScreen>
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
                     ),
                     padding: const EdgeInsets.fromLTRB(8, 6, 14, 6),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
+                        SizedBox(
                           width: 28,
                           height: 28,
-                          decoration: BoxDecoration(
-                            color: AppColors.orange,
-                            borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(2),
+                            child: Image.asset(
+                              'assets/images/Kabayansynclogo.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                    Icons.shield_rounded,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                            ),
                           ),
-                          child: const Icon(Icons.shield_rounded, size: 14, color: Colors.white),
                         ),
                         const SizedBox(width: 8),
                         const Text(
@@ -196,7 +214,10 @@ class _NeighborhoodWelcomeScreenState extends State<NeighborhoodWelcomeScreen>
                                   ),
                                 ),
                                 child: const Center(
-                                  child: Text('🏘️', style: TextStyle(fontSize: 64)),
+                                  child: Text(
+                                    '🏘️',
+                                    style: TextStyle(fontSize: 64),
+                                  ),
                                 ),
                               ),
                               // Orbiting dots
@@ -256,12 +277,15 @@ class _NeighborhoodWelcomeScreenState extends State<NeighborhoodWelcomeScreen>
                       const SizedBox(height: 36),
                       _GradientButton(
                         text: 'Join Ka-Bayan Sync',
-                        onTap: () => Navigator.of(context).pushNamed(AppRoutes.signUp),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed(AppRoutes.signUp),
                       ),
                       const SizedBox(height: 12),
                       _GhostButton(
                         text: 'I already have an account',
-                        onTap: () => Navigator.of(context).pushReplacementNamed(AppRoutes.login),
+                        onTap: () => Navigator.of(
+                          context,
+                        ).pushReplacementNamed(AppRoutes.login),
                       ),
                     ],
                   ),
@@ -288,7 +312,9 @@ class _NeighborhoodWelcomeScreenState extends State<NeighborhoodWelcomeScreen>
           height: 8,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: i % 2 == 0 ? AppColors.orange : Colors.white.withValues(alpha: 0.3),
+            color: i % 2 == 0
+                ? AppColors.orange
+                : Colors.white.withValues(alpha: 0.3),
           ),
         ),
       );

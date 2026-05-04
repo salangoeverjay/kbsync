@@ -1,12 +1,20 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:kbsync/core/routing/app_routes.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
 import 'package:kbsync/core/widgets/kb_bottom_nav.dart';
 import 'package:kbsync/core/widgets/kb_buttons.dart';
 import 'package:kbsync/features/auth/data/firebase_auth_service.dart';
 import 'package:kbsync/features/resident/data/resident_task_service.dart';
+import 'package:kbsync/features/resident/data/resident_location_service.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:kbsync/features/wallet/data/paymongo_service.dart';
 import 'package:kbsync/features/wallet/presentation/widgets/merchant_qr_sheet.dart';
 
@@ -21,12 +29,15 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final FirebaseAuthService _authService = FirebaseAuthService();
   final ResidentTaskService _taskService = ResidentTaskService();
   final PaymongoService _paymongoService = PaymongoService();
+  final ImagePicker _imagePicker = ImagePicker();
+  final ResidentLocationService _locationService = ResidentLocationService();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _groceryItemsController = TextEditingController();
   final TextEditingController _groceryBudgetController =
       TextEditingController();
   String? _userRole;
   String _service = 'Cleaning';
+  bool _initializedFromArgs = false;
   String _complexity = 'Moderate';
   String _mode = 'rush';
   final Set<String> _cleaningAreas = {'Living Room'};
@@ -34,7 +45,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   bool _laundryByKg = true;
   int _laundryKg = 3;
   int _laundryClothes = 12;
-  int _dishPlates = 12;
+  XFile? _referencePhoto;
+  bool _isUploadingPhoto = false;
   bool _isPublishing = false;
 
   static const Map<String, int> _serviceBasePrice = {
@@ -49,8 +61,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   static const int _laundryIncludedClothes = 12;
   static const int _laundryExtraPerKg = 25;
   static const int _laundryExtraPerClothes = 6;
-  static const int _dishIncludedPlates = 12;
-  static const int _dishExtraPerPlate = 4;
+  static const Map<String, int> _complexityFee = {
+    'Light': 0,
+    'Moderate': 30,
+    'Heavy': 60,
+  };
   static const int _rushFee = 50;
 
   static const _services = [
@@ -68,7 +83,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     'Garden',
     'Garage',
   ];
-  static const _complexities = ['Light', 'Moderate', 'Heavy'];
 
   static const _groceryLocations = [
     'Palengke',
@@ -82,6 +96,27 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   void initState() {
     super.initState();
     _loadUserRole();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initializedFromArgs) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['service'] is String) {
+        final svc = (args['service'] as String).trim();
+        final normalized = _normalizeIncomingService(svc);
+        if (normalized.isNotEmpty && normalized != _service) {
+          setState(() => _service = normalized);
+        }
+      } else if (args is String) {
+        final normalized = _normalizeIncomingService(args);
+        if (normalized.isNotEmpty && normalized != _service) {
+          setState(() => _service = normalized);
+        }
+      }
+      _initializedFromArgs = true;
+    }
   }
 
   Future<void> _loadUserRole() async {
@@ -156,13 +191,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   List<String> get _selectedDetails {
     switch (_service) {
       case 'Laundry':
-        return [
-          _laundryByKg ? '${_laundryKg} kg' : '${_laundryClothes} clothes',
-        ];
+        return [_laundryByKg ? '$_laundryKg kg' : '$_laundryClothes clothes'];
       case 'Grocery':
         return _groceryStops.toList(growable: false);
       case 'Dishes':
-        return ['$_dishPlates plates'];
+        return const ['General'];
       case 'Cleaning':
       default:
         return _cleaningAreas.toList(growable: false);
@@ -205,12 +238,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         final extraStops = (_groceryStops.length - 1).clamp(0, 1000);
         return extraStops * _additionalGroceryStopFee;
       case 'Dishes':
-        final extraPlates = (_dishPlates - _dishIncludedPlates).clamp(0, 10000);
-        return extraPlates * _dishExtraPerPlate;
+        return _complexityFee[_complexity] ?? 0;
       case 'Cleaning':
-      default:
+        final complexityFee = _complexityFee[_complexity] ?? 0;
         final extraAreas = (_selectedAreaCount - 1).clamp(0, 1000);
-        return extraAreas * _additionalAreaFee;
+        return complexityFee + (extraAreas * _additionalAreaFee);
+      default:
+        return 0;
     }
   }
 
@@ -224,6 +258,15 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   String get _totalLabel => _formatPeso(_totalAmount);
 
   String _formatPeso(int amount) => '₱$amount';
+
+  String _normalizeIncomingService(String s) {
+    final v = s.trim().toLowerCase();
+    if (v == 'pabili' || v == 'grocery') return 'Grocery';
+    if (v == 'laundry') return 'Laundry';
+    if (v == 'dishes') return 'Dishes';
+    if (v == 'cleaning') return 'Cleaning';
+    return '';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -319,10 +362,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   const SizedBox(height: 18),
                   _notesSection(),
                   const SizedBox(height: 18),
+                  _referencePhotoSection(),
+                  const SizedBox(height: 18),
                   _serviceDetailsSection(),
                   const SizedBox(height: 18),
-                  _complexitySection(),
-                  const SizedBox(height: 18),
+                  if (_service == 'Dishes' || _service == 'Cleaning') ...[
+                    _complexitySection(),
+                    const SizedBox(height: 18),
+                  ],
                   _modeSection(),
                 ],
               ),
@@ -360,11 +407,33 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       }
     }
 
+    if (_service != 'Grocery' && _referencePhoto == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Add a reference photo for the worker before publishing.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final ownerName = await _authService.getCurrentUserFullName();
     if (!mounted) return;
 
     setState(() => _isPublishing = true);
     try {
+      setState(() => _isUploadingPhoto = true);
+      final referencePhotoUrl = await _uploadReferencePhoto(currentUser.uid);
+      // Capture current resident location and lock it to the task
+      LatLng userLocation;
+      try {
+        userLocation = await _locationService.getCurrentLocation();
+      } catch (_) {
+        userLocation = ResidentLocationService.fallbackLocation;
+      }
+      if (!mounted) return;
+
       final notes = _notesController.text.trim();
       final ref = await _taskService.publishTask(
         uid: currentUser.uid,
@@ -372,7 +441,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         service: _service,
         areas: _selectedDetails,
         icon: _serviceIcon(_service),
-        complexity: _complexity,
+        complexity: (_service == 'Dishes' || _service == 'Cleaning')
+            ? _complexity
+            : null,
         mode: _mode,
         total: _totalLabel,
         groceryItems: _service == 'Grocery' ? _groceryItems : const <String>[],
@@ -386,7 +457,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 ownerName: ownerName ?? 'User',
               )
             : null,
+        referencePhotoUrl: referencePhotoUrl,
         notes: notes.isEmpty ? null : notes,
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
       );
 
       if (!mounted) return;
@@ -407,9 +481,94 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       ).showSnackBar(SnackBar(content: Text('Unable to publish task: $error')));
     } finally {
       if (mounted) {
-        setState(() => _isPublishing = false);
+        setState(() {
+          _isPublishing = false;
+          _isUploadingPhoto = false;
+        });
       }
     }
+  }
+
+  Future<void> _pickReferencePhoto(ImageSource source) async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) return;
+      setState(() => _referencePhoto = picked);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not pick photo: $error')));
+    }
+  }
+
+  Future<void> _showPhotoSourceSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Take photo'),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _pickReferencePhoto(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from gallery'),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _pickReferencePhoto(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Spark plan blocks Firebase Storage, so the reference photo is compressed
+  // to JPEG and embedded as a data: URI inside the task doc. The worker UI
+  // detects the `data:image/...` prefix and decodes via Image.memory.
+  // Hard cap: ~700 KB raw -> ~933 KB encoded, leaving headroom under the
+  // 1 MiB Firestore doc limit.
+  static const int _maxRefPhotoRawBytes = 700 * 1024;
+
+  Future<String?> _uploadReferencePhoto(String ownerUid) async {
+    final photo = _referencePhoto;
+    if (photo == null) return null;
+
+    Uint8List? bytes;
+    for (final quality in const [72, 60, 50, 40, 30]) {
+      final attempt = await FlutterImageCompress.compressWithFile(
+        photo.path,
+        quality: quality,
+        minWidth: 1280,
+        minHeight: 1280,
+        format: CompressFormat.jpeg,
+      );
+      if (attempt == null) continue;
+      bytes = attempt;
+      if (attempt.lengthInBytes <= _maxRefPhotoRawBytes) break;
+    }
+    bytes ??= await File(photo.path).readAsBytes();
+    if (bytes.lengthInBytes > _maxRefPhotoRawBytes) {
+      throw StateError(
+        'Reference photo still too large after compression: '
+        '${bytes.lengthInBytes} bytes (max $_maxRefPhotoRawBytes).',
+      );
+    }
+
+    return 'data:image/jpeg;base64,${base64Encode(bytes)}';
   }
 
   Future<void> _runMerchantQrCheckout({required String taskId}) async {
@@ -450,8 +609,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 backgroundColor: AppColors.plum,
               ),
             );
-            Navigator.of(context)
-                .pushReplacementNamed(AppRoutes.residentDashboard);
+            Navigator.of(
+              context,
+            ).pushReplacementNamed(AppRoutes.residentDashboard);
           },
         ),
       );
@@ -574,6 +734,90 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     );
   }
 
+  Widget _referencePhotoSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Label('REFERENCE PHOTO'),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_referencePhoto != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.file(
+                    File(_referencePhoto!.path),
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  height: 90,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.orangeLt.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    _service == 'Grocery'
+                        ? 'Optional photo'
+                        : 'Required for $_service tasks',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _showPhotoSourceSheet,
+                      icon: const Icon(Icons.add_a_photo_outlined, size: 16),
+                      label: Text(
+                        _referencePhoto == null ? 'Add Photo' : 'Replace Photo',
+                      ),
+                    ),
+                  ),
+                  if (_referencePhoto != null) ...[
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                      onPressed: () => setState(() => _referencePhoto = null),
+                      child: const Text('Remove'),
+                    ),
+                  ],
+                ],
+              ),
+              if (_isUploadingPhoto)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: LinearProgressIndicator(minHeight: 3),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _groceryItemsSection() {
     if (_service != 'Grocery') return const SizedBox.shrink();
 
@@ -675,7 +919,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       case 'Grocery':
         return _grocerySection();
       case 'Dishes':
-        return _dishesDetailsSection();
+        return const SizedBox.shrink();
       case 'Cleaning':
       default:
         return _cleaningAreasSection();
@@ -859,36 +1103,20 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     );
   }
 
-  Widget _dishesDetailsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _Label('DISH SIZE'),
-        const SizedBox(height: 8),
-        _CounterCard(
-          label: 'Number of Plates',
-          suffix: 'plates',
-          value: _dishPlates,
-          min: 1,
-          onChanged: (next) => setState(() => _dishPlates = next),
-        ),
-      ],
-    );
-  }
-
   Widget _complexitySection() {
+    const complexities = ['Light', 'Moderate', 'Heavy'];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _Label('COMPLEXITY'),
         const SizedBox(height: 8),
         Row(
-          children: _complexities
+          children: complexities
               .map(
                 (c) => Expanded(
                   child: Container(
                     margin: EdgeInsets.only(
-                      right: c == _complexities.last ? 0 : 8,
+                      right: c == complexities.last ? 0 : 8,
                     ),
                     child: OutlinedButton(
                       onPressed: () => setState(() => _complexity = c),

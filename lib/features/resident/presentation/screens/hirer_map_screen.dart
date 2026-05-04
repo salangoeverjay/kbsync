@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:kbsync/core/routing/app_routes.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
+import 'package:kbsync/core/constants.dart';
 import 'package:kbsync/features/resident/data/nearby_worker_service.dart';
 import 'package:kbsync/features/resident/data/resident_location_service.dart';
 import 'package:kbsync/core/widgets/kb_bottom_nav.dart';
 import 'package:kbsync/core/widgets/kb_buttons.dart';
-import 'package:kbsync/core/widgets/progress_ring.dart';
 import 'package:latlong2/latlong.dart';
 
 class HirerMapScreen extends StatelessWidget {
@@ -19,8 +19,9 @@ class HirerMapScreen extends StatelessWidget {
       bottomNavigationBar: KbBottomNav(
         active: KbNavTab.home,
         onTap: (tab) {
-          if (tab == KbNavTab.tasks)
+          if (tab == KbNavTab.tasks) {
             Navigator.of(context).pushNamed(AppRoutes.createTask);
+          }
         },
       ),
       body: SafeArea(
@@ -36,10 +37,7 @@ class HirerMapScreen extends StatelessWidget {
               bottom: 0,
               left: 0,
               right: 0,
-              child: _TaskBottomSheet(
-                onNewTask: () =>
-                    Navigator.of(context).pushNamed(AppRoutes.createTask),
-              ),
+              child: const _TaskBottomSheet(),
             ),
           ],
         ),
@@ -74,7 +72,7 @@ class _MapBackground extends StatelessWidget {
                             center,
                             worker.position,
                           ) <=
-                          2000,
+                          kNearbyRadiusMeters,
                     )
                     .toList(growable: false);
 
@@ -88,7 +86,7 @@ class _MapBackground extends StatelessWidget {
                     initialCenter: center,
                     initialZoom: 15.5,
                     interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.none,
+                      flags: InteractiveFlag.all,
                     ),
                   ),
                   children: [
@@ -101,7 +99,7 @@ class _MapBackground extends StatelessWidget {
                       circles: [
                         CircleMarker(
                           point: center,
-                          radius: 200,
+                          radius: kMapCircleRadiusMeters,
                           useRadiusInMeter: true,
                           color: AppColors.orange.withValues(alpha: 0.08),
                           borderColor: AppColors.orange.withValues(alpha: 0.7),
@@ -230,11 +228,15 @@ class _SearchBar extends StatelessWidget {
 }
 
 class _TaskBottomSheet extends StatelessWidget {
-  final VoidCallback onNewTask;
-  const _TaskBottomSheet({required this.onNewTask});
+  const _TaskBottomSheet();
   static const _locationService = ResidentLocationService();
   static final _workerService = NearbyWorkerService();
   static const _distance = Distance();
+
+  String _formatRating(double? rating) {
+    final value = rating ?? 4.7;
+    return value.toStringAsFixed(1);
+  }
 
   String _initialForName(String name) {
     final trimmed = name.trim();
@@ -300,241 +302,176 @@ class _TaskBottomSheet extends StatelessWidget {
                                   center,
                                   worker.position,
                                 ) <=
-                                2000,
+                                kNearbyRadiusMeters,
                           )
                           .toList(growable: false);
 
-                  NearbyWorkerMarker? nearest;
-                  double nearestMeters = 0;
-                  for (final worker in workers) {
-                    final meters = _distance.as(
-                      LengthUnit.Meter,
-                      center,
-                      worker.position,
-                    );
-                    if (nearest == null || meters < nearestMeters) {
-                      nearest = worker;
-                      nearestMeters = meters;
-                    }
-                  }
-
-                  final workerName = nearest?.name ?? 'Waiting for worker';
-                  final distanceText = nearest == null
-                      ? ' • no nearby worker yet'
-                      : _distanceLabel(nearestMeters);
-
-                  return Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.grad,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Center(
-                          child: Text(
-                            _initialForName(workerName),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 22,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              workerName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 17,
-                                letterSpacing: -0.4,
-                                color: AppColors.ink,
+                  final nearbyWorkers =
+                      workers
+                          .map(
+                            (worker) => (
+                              worker: worker,
+                              meters: _distance.as(
+                                LengthUnit.Meter,
+                                center,
+                                worker.position,
                               ),
                             ),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.star_rounded,
-                                  size: 11,
-                                  color: Color(0xFFF59E0B),
-                                ),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  '4.7',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                    color: AppColors.ink,
-                                  ),
-                                ),
-                                Text(
-                                  distanceText,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.ink.withValues(alpha: 0.5),
-                                  ),
-                                ),
-                              ],
+                          )
+                          .toList(growable: false)
+                        ..sort((a, b) => a.meters.compareTo(b.meters));
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Workers Near You (2km)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 17,
+                              letterSpacing: -0.4,
+                              color: AppColors.ink,
                             ),
-                          ],
-                        ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${nearbyWorkers.length} available',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.ink.withValues(alpha: 0.55),
+                            ),
+                          ),
+                        ],
                       ),
-                      const KbStatusTag.green('VERIFIED'),
+                      const SizedBox(height: 10),
+                      if (nearbyWorkers.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.ink.withValues(alpha: 0.08),
+                            ),
+                          ),
+                          child: Text(
+                            'No workers currently within 2km. Please check again in a moment.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.ink.withValues(alpha: 0.65),
+                            ),
+                          ),
+                        )
+                      else
+                        ...nearbyWorkers
+                            .take(3)
+                            .map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Container(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    10,
+                                    8,
+                                    10,
+                                    8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.ink.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 42,
+                                        height: 42,
+                                        decoration: BoxDecoration(
+                                          gradient: AppColors.grad,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            _initialForName(item.worker.name),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item.worker.name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
+                                                color: AppColors.ink,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.star_rounded,
+                                                  size: 11,
+                                                  color: Color(0xFFF59E0B),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  _formatRating(
+                                                    item.worker.rating,
+                                                  ),
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 12,
+                                                    color: AppColors.ink,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  _distanceLabel(item.meters),
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: AppColors.ink
+                                                        .withValues(
+                                                          alpha: 0.55,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const KbStatusTag.green('VERIFIED'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                     ],
                   );
                 },
               );
             },
-          ),
-          const SizedBox(height: 12),
-          // Scan banner
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
-            decoration: BoxDecoration(
-              color: AppColors.orangeLt,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.orange.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '🔍 Entrance Face Scan in Progress',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: AppColors.orange,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Worker is at your doorstep. Session begins once Face Scan is 100% matched.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.orange.withValues(alpha: 0.85),
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Details grid
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 6,
-            mainAxisSpacing: 6,
-            childAspectRatio: 3.5,
-            children: [
-              _DetailCell('Task ID', 'KB-4082790'),
-              _DetailCell('Service', 'House Cleaning'),
-              _DetailCell('Mode', 'RUSH'),
-              _DetailCell('Arrived', '09:00 AM'),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Divider(height: 1),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total Payment',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.ink.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  const Text(
-                    '₱230',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 22,
-                      color: AppColors.plum,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  Text(
-                    'Base ₱180 + Rush ₱50',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppColors.ink.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ),
-              GestureDetector(
-                onTap: onNewTask,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.grad,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    '+ New Task',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailCell extends StatelessWidget {
-  final String label, value;
-  const _DetailCell(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.bg,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: AppColors.ink.withValues(alpha: 0.5),
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-              color: AppColors.plum,
-            ),
           ),
         ],
       ),

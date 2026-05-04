@@ -46,7 +46,7 @@ class WorkerPresenceService {
     }
 
     final first = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
     await _writePosition(uid, first, true);
 

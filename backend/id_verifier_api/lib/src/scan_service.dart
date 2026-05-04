@@ -138,6 +138,7 @@ class TaskScanService {
       passed: passed,
       livenessRaw: livenessRaw,
       matchRaw: matchRaw,
+      taskDoc: taskDoc,
     );
 
     if (passed) {
@@ -168,9 +169,12 @@ class TaskScanService {
     required bool passed,
     required Map<String, dynamic> livenessRaw,
     required Map<String, dynamic> matchRaw,
+    required Map<String, dynamic> taskDoc,
   }) async {
     final now = DateTime.now().toUtc();
     final scanField = kind == _ScanKind.entrance ? 'entrance' : 'exit';
+    final isEntrancePass = passed && kind == _ScanKind.entrance;
+    final isExitPass = passed && kind == _ScanKind.exit;
 
     final scanRecord = <String, dynamic>{
       'workerUid': req.workerUid,
@@ -184,13 +188,59 @@ class TaskScanService {
       'at': firestoreServerTimestamp,
     };
 
-    // Patch the task doc with the new scan record.
-    await _firestore.patchDoc('tasks/${req.taskId}', {
+    // Build the patch for the top-level tasks/{id} doc.
+    final taskPatch = <String, dynamic>{
       'scans.$scanField': scanRecord,
-      if (passed && kind == _ScanKind.entrance) 'statusLabel': 'In Progress',
-      if (passed && kind == _ScanKind.exit) 'statusLabel': 'Completed',
+      if (isEntrancePass) 'statusLabel': 'In Progress',
+      if (isExitPass) 'statusLabel': 'Completed',
       'updatedAt': firestoreServerTimestamp,
-    });
+    };
+
+    // Only on a passing entrance scan do we mark the task as accepted by
+    // this worker. A failed scan must leave the task open so other workers
+    // (and the same worker on retry) can still see it.
+    if (isEntrancePass) {
+      final workerName = (req.workerName?.trim().isNotEmpty == true)
+          ? req.workerName!.trim()
+          : 'Worker';
+      taskPatch['worker'] = workerName;
+      taskPatch['workerUid'] = req.workerUid;
+      taskPatch['acceptedAt'] = firestoreServerTimestamp;
+    }
+
+    await _firestore.patchDoc('tasks/${req.taskId}', taskPatch);
+
+    // Mirror the assignment to the resident's per-user copy so the
+    // resident dashboard reflects who accepted the task.
+    if (isEntrancePass) {
+      final ownerId = (taskDoc['ownerId'] as String?)?.trim();
+      if (ownerId != null && ownerId.isNotEmpty) {
+        await _firestore.patchDoc(
+          'users/$ownerId/active_tasks/${req.taskId}',
+          {
+            'worker': taskPatch['worker'],
+            'workerUid': req.workerUid,
+            'statusLabel': 'In Progress',
+            'acceptedAt': firestoreServerTimestamp,
+            'updatedAt': firestoreServerTimestamp,
+          },
+        );
+      }
+    }
+
+    if (isExitPass) {
+      final ownerId = (taskDoc['ownerId'] as String?)?.trim();
+      if (ownerId != null && ownerId.isNotEmpty) {
+        await _firestore.patchDoc(
+          'users/$ownerId/active_tasks/${req.taskId}',
+          {
+            'statusLabel': 'Completed',
+            'completedAt': firestoreServerTimestamp,
+            'updatedAt': firestoreServerTimestamp,
+          },
+        );
+      }
+    }
 
     // Update worker's failure counter.
     final workerDoc =
@@ -281,12 +331,17 @@ class TaskScanRequest {
   final double lat;
   final double lng;
 
+  /// Display name written to the task on a passing entrance scan so the
+  /// resident dashboard shows who accepted the work. Ignored for exit scans.
+  final String? workerName;
+
   const TaskScanRequest({
     required this.taskId,
     required this.workerUid,
     required this.selfieBytes,
     required this.lat,
     required this.lng,
+    this.workerName,
   });
 }
 

@@ -131,6 +131,39 @@ class WalletService {
     await batch.commit();
   }
 
+  Future<void> addTransaction({
+    required String uid,
+    required String title,
+    required double amount,
+    required bool isCredit,
+    required String category,
+    String subtitle = '',
+    Map<String, dynamic>? metadata,
+  }) async {
+    final txRef = _transactions(uid).doc();
+    final batch = _firestore.batch();
+
+    // Update balance if it's a debit
+    if (!isCredit) {
+      batch.set(_userDoc(uid), {
+        'walletBalance': FieldValue.increment(-amount),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+
+    batch.set(txRef, {
+      'title': title,
+      'subtitle': subtitle,
+      'amount': amount,
+      'isCredit': isCredit,
+      'category': category,
+      if (metadata != null) ...metadata,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
   static double _parseAmount(Object? value) {
     if (value is num) return value.toDouble();
     if (value is String) {

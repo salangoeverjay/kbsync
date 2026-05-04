@@ -1,0 +1,13 @@
+{
+  "name": "kbsync-create-admin",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local helper to create a Firebase admin user without Blaze",
+  "main": "create_admin.js",
+  "scripts": {
+    "start": "node create_admin.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}

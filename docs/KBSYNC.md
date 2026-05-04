@@ -208,7 +208,7 @@ Enforcement:
 ## HIRER PROCESS
 
 1. Check nearby workers
-2. Post task
+2. Post task (attach a reference photo and specify what/where to clean, dish count, or laundry load)
 3. Choose Standard or Rush
 4. Monitor worker GPS
 5. Verify work
@@ -232,3 +232,15 @@ Enforcement:
 - Hyper-local trust system
 - Real-time verification
 - Financial safety protocols
+
+## HOW TO RUN
+- cd backend/id_verifier_api
+- dart run bin/server.dart
+- cd c:\Users\salan\OneDrive\Documents\kbsync
+- firebase emulators:start --only functions
+- flutter run --dart-define=KBSYNC_ID_VERIFIER_API_BASE_URL=http://192.168.254.100:8080 --dart-define=KBSYNC_USE_FUNCTIONS_EMULATOR=true --dart-define=KBSYNC_FUNCTIONS_EMULATOR_HOST=192.168.254.100 --dart-define=KBSYNC_FUNCTIONS_EMULATOR_PORT=5001            
+
+### If Gradle Fails With an Immutable Kotlin DSL Workspace Error
+- Stop any running Gradle daemons with `gradlew --stop` from the project root.
+- Delete the affected cache under `C:\Users\salan\.gradle\caches\8.14\kotlin-dsl\scripts\` if the error names a specific workspace directory.
+- Run `flutter clean` and try `flutter run` again.

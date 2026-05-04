@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:kbsync/core/routing/app_routes.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
+import 'package:kbsync/core/constants.dart';
 import 'package:kbsync/features/auth/data/firebase_auth_service.dart';
 import 'package:kbsync/features/resident/data/resident_location_service.dart';
 import 'package:kbsync/features/resident/data/nearby_worker_service.dart';
 import 'package:kbsync/features/resident/data/resident_task_service.dart';
+import 'package:kbsync/features/resident/presentation/widgets/resident_task_review_sheet.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kbsync/core/widgets/kb_bottom_nav.dart';
 import 'package:kbsync/core/widgets/kb_buttons.dart';
-import 'package:kbsync/core/widgets/progress_ring.dart';
 import 'package:latlong2/latlong.dart';
 
 class ResidentDashboardScreen extends StatefulWidget {
@@ -28,17 +29,21 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
   String? get _currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
-  Future<void> _openCreateTask() async {
-    await Navigator.of(context).pushNamed(AppRoutes.createTask);
+  Future<void> _openCreateTask([String? service]) async {
+    if (service == null) {
+      await Navigator.of(context).pushNamed(AppRoutes.createTask);
+    } else {
+      await Navigator.of(
+        context,
+      ).pushNamed(AppRoutes.createTask, arguments: {'service': service});
+    }
   }
 
   Future<bool> _confirmDeleteTask(ResidentTaskRecord task) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Cancel this task?',
           style: TextStyle(
@@ -98,10 +103,33 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       );
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not cancel task: $err')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not cancel task: $err')));
     }
+  }
+
+  Future<void> _reviewTask(ResidentTaskRecord task) async {
+    final approved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ResidentTaskReviewSheet(task: task),
+    );
+
+    if (!mounted || approved == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          approved
+              ? 'Payment released to ${task.worker}. '
+              : 'Task declined. No payment was sent.',
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: approved ? AppColors.green : const Color(0xFFDC2626),
+      ),
+    );
   }
 
   @override
@@ -176,13 +204,16 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                               avgRating: avgRating,
                             ),
                             const SizedBox(height: 20),
-                            _QuickActionsSection(onTap: _openCreateTask),
+                            _QuickActionsSection(
+                              onTap: (s) => _openCreateTask(s),
+                            ),
                             const SizedBox(height: 20),
                             _ActiveTasksSection(
                               tasks: tasks,
                               onTap: () => Navigator.of(
                                 context,
                               ).pushNamed(AppRoutes.hirerMap),
+                              onReviewTask: _reviewTask,
                               onConfirmDelete: _confirmDeleteTask,
                               onDelete: _deleteTask,
                             ),
@@ -400,9 +431,8 @@ class _MonthlySpendingSummary {
     double total = 0;
 
     for (final task in tasks) {
-      if (task.createdAt.isBefore(startOfMonth)) {
-        continue;
-      }
+      final referenceDate = task.paymentReleasedAt ?? task.createdAt;
+      if (referenceDate.isBefore(startOfMonth)) continue;
 
       final normalizedService = _normalizeService(task.service);
       final amount = task.totalAmount;
@@ -489,16 +519,36 @@ class _StatCard extends StatelessWidget {
 }
 
 class _QuickActionsSection extends StatelessWidget {
-  final VoidCallback onTap;
+  final void Function(String service) onTap;
   const _QuickActionsSection({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final actions = [
-      (emoji: '🧹', label: 'Cleaning', color: AppColors.orange),
-      (emoji: '🛒', label: 'Pabili', color: const Color(0xFF0891B2)),
-      (emoji: '🧺', label: 'Laundry', color: const Color(0xFF7C3AED)),
-      (emoji: '🍽️', label: 'Dishes', color: const Color(0xFF059669)),
+      (
+        emoji: '🧹',
+        label: 'Cleaning',
+        service: 'Cleaning',
+        color: AppColors.orange,
+      ),
+      (
+        emoji: '🛒',
+        label: 'Pabili',
+        service: 'Grocery',
+        color: const Color(0xFF0891B2),
+      ),
+      (
+        emoji: '🧺',
+        label: 'Laundry',
+        service: 'Laundry',
+        color: const Color(0xFF7C3AED),
+      ),
+      (
+        emoji: '🍽️',
+        label: 'Dishes',
+        service: 'Dishes',
+        color: const Color(0xFF059669),
+      ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -510,7 +560,7 @@ class _QuickActionsSection extends StatelessWidget {
               .map(
                 (a) => Expanded(
                   child: GestureDetector(
-                    onTap: onTap,
+                    onTap: () => onTap(a.service),
                     child: Container(
                       margin: EdgeInsets.only(
                         right: actions.last.label == a.label ? 0 : 8,
@@ -566,34 +616,51 @@ class _QuickActionsSection extends StatelessWidget {
   }
 }
 
-class _ActiveTasksSection extends StatelessWidget {
+class _ActiveTasksSection extends StatefulWidget {
   final List<ResidentTaskRecord> tasks;
   final VoidCallback onTap;
+  final Future<void> Function(ResidentTaskRecord task) onReviewTask;
   final Future<bool> Function(ResidentTaskRecord task) onConfirmDelete;
   final Future<void> Function(ResidentTaskRecord task) onDelete;
 
   const _ActiveTasksSection({
     required this.tasks,
     required this.onTap,
+    required this.onReviewTask,
     required this.onConfirmDelete,
     required this.onDelete,
   });
 
+  @override
+  State<_ActiveTasksSection> createState() => _ActiveTasksSectionState();
+}
+
+class _ActiveTasksSectionState extends State<_ActiveTasksSection> {
+  static const int _collapsedCount = 5;
+  bool _expanded = false;
+
   bool _canDelete(ResidentTaskRecord t) =>
       t.statusLabel.toLowerCase() == 'open';
 
+  void _toggleExpanded() => setState(() => _expanded = !_expanded);
+
   @override
   Widget build(BuildContext context) {
+    final visible = _expanded
+        ? widget.tasks
+        : widget.tasks.take(_collapsedCount).toList();
+    final canToggle = widget.tasks.length > _collapsedCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
           title: 'Active Tasks',
-          linkText: 'View all',
-          onLink: () {},
+          linkText: _expanded ? 'Show less' : 'View all',
+          onLink: canToggle ? _toggleExpanded : null,
         ),
         const SizedBox(height: 10),
-        if (tasks.isEmpty)
+        if (widget.tasks.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Text(
@@ -604,172 +671,147 @@ class _ActiveTasksSection extends StatelessWidget {
               ),
             ),
           ),
-        ...tasks.map((t) {
-          final card = GestureDetector(
-            onTap: onTap,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 14,
-                    offset: const Offset(0, 2),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          child: Column(
+            children: visible.map((t) {
+              final status = t.statusLabel.trim().toLowerCase();
+              final card = GestureDetector(
+                onTap: status == 'completed'
+                    ? () => widget.onReviewTask(t)
+                    : widget.onTap,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 14,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: AppColors.orangeLt,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Center(
-                      child: Text(t.icon, style: const TextStyle(fontSize: 22)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: AppColors.ink,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: AppColors.orangeLt,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Center(
+                          child: Text(
+                            t.icon,
+                            style: const TextStyle(fontSize: 22),
                           ),
                         ),
-                        Text.rich(
-                          TextSpan(
-                            text: 'Worker: ',
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                            Text.rich(
+                              TextSpan(
+                                text: 'Worker: ',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.ink.withValues(alpha: 0.5),
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: t.worker,
+                                    style: const TextStyle(
+                                      color: AppColors.plum,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          status == 'declined'
+                              ? KbStatusTag.red(t.statusLabel)
+                              : status == 'approved'
+                              ? KbStatusTag.green(t.statusLabel)
+                              : t.isOrange
+                              ? KbStatusTag.orange(t.statusLabel)
+                              : KbStatusTag.green(t.statusLabel),
+                          const SizedBox(height: 4),
+                          Text(
+                            t.time,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 10,
                               color: AppColors.ink.withValues(alpha: 0.5),
                             ),
-                            children: [
-                              TextSpan(
-                                text: t.worker,
-                                style: const TextStyle(
-                                  color: AppColors.plum,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                ),
+              );
+
+              if (!_canDelete(t)) return card;
+
+              return Dismissible(
+                key: ValueKey('active-task-${t.id}'),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  alignment: Alignment.centerRight,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      t.isOrange
-                          ? KbStatusTag.orange(t.statusLabel)
-                          : KbStatusTag.green(t.statusLabel),
-                      const SizedBox(height: 4),
+                      Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      SizedBox(width: 6),
                       Text(
-                        t.time,
+                        'Delete',
                         style: TextStyle(
-                          fontSize: 10,
-                          color: AppColors.ink.withValues(alpha: 0.5),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          );
-
-          if (!_canDelete(t)) return card;
-
-          return Dismissible(
-            key: ValueKey('active-task-${t.id}'),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              alignment: Alignment.centerRight,
-              decoration: BoxDecoration(
-                color: const Color(0xFFDC2626),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.delete_outline_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Delete',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            confirmDismiss: (_) => onConfirmDelete(t),
-            onDismissed: (_) => onDelete(t),
-            child: card,
-          );
-        }),
+                ),
+                confirmDismiss: (_) => widget.onConfirmDelete(t),
+                onDismissed: (_) => widget.onDelete(t),
+                child: card,
+              );
+            }).toList(),
+          ),
+        ),
       ],
-    );
-  }
-}
-
-class _ResidentTask {
-  final String icon;
-  final String title;
-  final String worker;
-  final String statusLabel;
-  final bool isOrange;
-  final String time;
-
-  const _ResidentTask({
-    required this.icon,
-    required this.title,
-    required this.worker,
-    required this.statusLabel,
-    required this.isOrange,
-    required this.time,
-  });
-
-  factory _ResidentTask.fromPublishedTask(Map<String, dynamic> payload) {
-    final service = (payload['service'] as String?)?.trim() ?? 'Task';
-    final areas =
-        (payload['areas'] as List?)
-            ?.whereType<String>()
-            .map((area) => area.trim())
-            .where((area) => area.isNotEmpty)
-            .toList() ??
-        const <String>[];
-
-    final areaLabel = areas.isEmpty ? 'General' : areas.join(', ');
-    final icon = (payload['icon'] as String?)?.trim() ?? '🧹';
-
-    return _ResidentTask(
-      icon: icon,
-      title: '$service – $areaLabel',
-      worker: 'Awaiting worker',
-      statusLabel: (payload['statusLabel'] as String?)?.trim() ?? 'Open',
-      isOrange: (payload['isOrange'] as bool?) ?? true,
-      time: (payload['time'] as String?)?.trim() ?? 'Just now',
     );
   }
 }
@@ -817,7 +859,7 @@ class _NearbyWorkersSection extends StatelessWidget {
                                       center,
                                       worker.position,
                                     ) <=
-                                    2000,
+                                    kNearbyRadiusMeters,
                               )
                               .toList(growable: false);
 
@@ -844,7 +886,7 @@ class _NearbyWorkersSection extends StatelessWidget {
                                 circles: [
                                   CircleMarker(
                                     point: center,
-                                    radius: 200,
+                                    radius: kMapCircleRadiusMeters,
                                     useRadiusInMeter: true,
                                     color: AppColors.orange.withValues(
                                       alpha: 0.08,
@@ -942,7 +984,7 @@ class _NearbyWorkersSection extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    '2km radius →',
+                                    '${(kNearbyRadiusMeters / 1000).toInt()}km radius →',
                                     style: TextStyle(
                                       color: AppColors.orange,
                                       fontWeight: FontWeight.w700,

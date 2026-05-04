@@ -135,6 +135,50 @@ class PaymongoService {
     return Map<String, dynamic>.from(result.data as Map);
   }
 
+  Future<Map<String, dynamic>> requestWithdraw({
+    required double amountPesos,
+    String? destination,
+  }) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (_useEmulator && (userId == null || userId.isEmpty)) {
+      throw FirebaseFunctionsException(
+        code: 'unauthenticated',
+        message: 'Sign in required to test withdraw in emulator mode.',
+      );
+    }
+
+    final result = await _invokeFunction('requestWithdraw', <String, dynamic>{
+      'amountPesos': amountPesos,
+      ...?(_useEmulator && userId != null && userId.isNotEmpty
+          ? <String, dynamic>{'userId': userId}
+          : null),
+      ...?(destination != null
+          ? <String, dynamic>{'destination': destination}
+          : null),
+    });
+    return result;
+  }
+
+  Future<Map<String, dynamic>> createPayout(
+    Map<String, dynamic> payoutData,
+  ) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (_useEmulator && (userId == null || userId.isEmpty)) {
+      throw FirebaseFunctionsException(
+        code: 'unauthenticated',
+        message: 'Sign in required to test payout in emulator mode.',
+      );
+    }
+
+    final result = await _invokeFunction('createPayout', <String, dynamic>{
+      ...payoutData,
+      ...?(_useEmulator && userId != null && userId.isNotEmpty
+          ? <String, dynamic>{'userId': userId}
+          : null),
+    });
+    return result;
+  }
+
   Future<Map<String, dynamic>> _invokeEmulatorFunction(
     String functionName,
     Map<String, dynamic> data,

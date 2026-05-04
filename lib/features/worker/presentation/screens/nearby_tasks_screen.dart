@@ -1,12 +1,18 @@
 import 'dart:math' as math;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter/material.dart';
 import 'package:kbsync/core/routing/app_routes.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
+import 'package:kbsync/core/constants.dart';
 import 'package:kbsync/core/widgets/kb_bottom_nav.dart';
 import 'package:kbsync/features/resident/data/resident_location_service.dart';
+import 'package:kbsync/features/worker/data/worker_active_task_service.dart';
+import 'package:kbsync/features/worker/data/worker_lockout_service.dart';
 import 'package:kbsync/features/worker/data/worker_task_feed_service.dart';
+import 'package:kbsync/features/worker/presentation/widgets/active_task_banner.dart';
+import 'package:kbsync/features/worker/presentation/widgets/worker_lockout_banner.dart';
 import 'package:latlong2/latlong.dart';
 
 class NearbyTasksScreen extends StatefulWidget {
@@ -18,8 +24,12 @@ class NearbyTasksScreen extends StatefulWidget {
 
 class _NearbyTasksScreenState extends State<NearbyTasksScreen> {
   final WorkerTaskFeedService _taskFeedService = WorkerTaskFeedService();
+  final WorkerLockoutService _lockoutService = WorkerLockoutService();
+  final WorkerActiveTaskService _activeTaskService = WorkerActiveTaskService();
   String _filter = 'All';
   bool _sortByDistance = true;
+
+  String? get _currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
   static const _filters = ['All', 'Cleaning', 'Pabili', 'Laundry', 'Dishes'];
 
@@ -66,44 +76,103 @@ class _NearbyTasksScreenState extends State<NearbyTasksScreen> {
       ),
       body: SafeArea(
         bottom: false,
-        child: StreamBuilder<List<WorkerOpenTask>>(
-          stream: _taskFeedService.watchOpenTasks(),
-          builder: (context, snapshot) {
-            final tasks = _filteredTasks(
-              snapshot.data ?? const <WorkerOpenTask>[],
-            );
+        child: StreamBuilder<WorkerLockoutState>(
+          stream: _currentUserId == null
+              ? Stream<WorkerLockoutState>.value(WorkerLockoutState.empty)
+              : _lockoutService.watchLockout(_currentUserId!),
+          initialData: WorkerLockoutState.empty,
+          builder: (context, lockoutSnap) {
+            final lockoutState = lockoutSnap.data ?? WorkerLockoutState.empty;
+            final locked = lockoutState.isLocked();
+            return StreamBuilder<List<WorkerOpenTask>>(
+              stream: _taskFeedService.watchOpenTasks(),
+              builder: (context, snapshot) {
+                final tasks = _filteredTasks(
+                  snapshot.data ?? const <WorkerOpenTask>[],
+                );
 
-            return Column(
-              children: [
-                _NearbyHeader(
-                  count: tasks.length,
-                  sortByDistance: _sortByDistance,
-                  filter: _filter,
-                  onToggleSort: () =>
-                      setState(() => _sortByDistance = !_sortByDistance),
-                  onFilterChanged: (f) => setState(() => _filter = f),
-                ),
-                _MapStrip(tasks: tasks),
-                Expanded(
-                  child: tasks.isEmpty
-                      ? const _EmptyState()
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                          itemCount: tasks.length,
-                          itemBuilder: (ctx, i) {
-                            final task = tasks[i];
-                            return _TaskCard(
-                              task: task,
-                              distKm: _distanceSeed(task.id),
-                              onTap: () => Navigator.of(ctx).pushNamed(
-                                AppRoutes.taskAvailable,
-                                arguments: task,
-                              ),
-                            );
-                          },
+                void showLockoutSnack() {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'You are temporarily locked out from accepting tasks.',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Color(0xFFB91C1C),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    if (locked) WorkerLockoutBanner(state: lockoutState),
+                    if (_currentUserId != null)
+                      StreamBuilder<List<WorkerActiveTask>>(
+                        stream: _activeTaskService.watchActiveTasks(
+                          _currentUserId!,
                         ),
-                ),
-              ],
+                        initialData: const <WorkerActiveTask>[],
+                        builder: (context, activeSnap) {
+                          final activeTasks =
+                              activeSnap.data ?? const <WorkerActiveTask>[];
+                          if (activeTasks.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          final activeTask = activeTasks.first;
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                            child: ActiveTaskBanner(
+                              task: activeTask,
+                              onCancel: () =>
+                                  _activeTaskService.cancelActiveTask(
+                                    taskId: activeTask.id,
+                                    ownerId: activeTask.ownerId,
+                                  ),
+                            ),
+                          );
+                        },
+                      ),
+                    _NearbyHeader(
+                      count: tasks.length,
+                      sortByDistance: _sortByDistance,
+                      filter: _filter,
+                      onToggleSort: () =>
+                          setState(() => _sortByDistance = !_sortByDistance),
+                      onFilterChanged: (f) => setState(() => _filter = f),
+                    ),
+                    _MapStrip(tasks: tasks),
+                    Expanded(
+                      child: tasks.isEmpty
+                          ? const _EmptyState()
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                12,
+                                16,
+                                16,
+                              ),
+                              itemCount: tasks.length,
+                              itemBuilder: (ctx, i) {
+                                final task = tasks[i];
+                                return Opacity(
+                                  opacity: locked ? 0.5 : 1.0,
+                                  child: _TaskCard(
+                                    task: task,
+                                    distKm: _distanceSeed(task.id),
+                                    onTap: locked
+                                        ? showLockoutSnack
+                                        : () => Navigator.of(ctx).pushNamed(
+                                            AppRoutes.taskAvailable,
+                                            arguments: task,
+                                          ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),
@@ -150,7 +219,7 @@ class _NearbyHeader extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '$count tasks within 2km',
+                      '$count tasks within ${(kNearbyRadiusMeters / 1000).toInt()}km',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -263,20 +332,6 @@ class _MapStrip extends StatelessWidget {
     );
   }
 
-  Color _colorForTask(WorkerOpenTask task) {
-    switch (task.serviceFilterLabel) {
-      case 'Pabili':
-        return const Color(0xFF38BDF8);
-      case 'Laundry':
-        return const Color(0xFFA78BFA);
-      case 'Dishes':
-        return const Color(0xFF34D399);
-      case 'Cleaning':
-      default:
-        return const Color(0xFFFC6E62);
-    }
-  }
-
   String _residentInitial(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return 'R';
@@ -335,7 +390,7 @@ class _MapStrip extends StatelessWidget {
                     circles: [
                       CircleMarker(
                         point: center,
-                        radius: 2000,
+                        radius: kNearbyRadiusMeters,
                         useRadiusInMeter: true,
                         color: AppColors.orange.withValues(alpha: 0.06),
                         borderColor: AppColors.orange.withValues(alpha: 0.8),

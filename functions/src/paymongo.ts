@@ -167,6 +167,31 @@ export class PaymongoClient {
   async retrievePaymentIntent(id: string): Promise<unknown> {
     return this.request("GET", `/payment_intents/${id}`);
   }
+
+  async createPayout(args: {
+    amountCentavos: number;
+    method: string;
+    recipient: string;
+    description: string;
+  }): Promise<unknown> {
+    const body = {
+      data: {
+        attributes: {
+          amount: args.amountCentavos,
+          currency: "PHP",
+          payout_method: {
+            type: args.method, // "gcash", "maya", "bank_transfer"
+            details: {
+              account_number: args.recipient, // phone for GCash/Maya, account for bank
+            },
+          },
+          description: args.description,
+        },
+      },
+    };
+
+    return this.request("POST", "/payouts", body);
+  }
 }
 
 export function verifyWebhookSignature(

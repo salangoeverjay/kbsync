@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kbsync/core/routing/app_routes.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kbsync/features/auth/data/firebase_auth_service.dart';
 import 'package:kbsync/core/theme/app_colors.dart';
 
 class LoadingScreen extends StatefulWidget {
@@ -15,8 +17,6 @@ class LoadingScreen extends StatefulWidget {
 
 class _LoadingScreenState extends State<LoadingScreen>
     with TickerProviderStateMixin {
-  static const _logoUrl =
-      'https://www.figma.com/api/mcp/asset/306d3d6c-543c-4bd3-8e16-258db1b729af';
   static const _loadingDuration = Duration(milliseconds: 2400);
 
   late final Timer _routeTimer;
@@ -28,9 +28,7 @@ class _LoadingScreenState extends State<LoadingScreen>
   late final Animation<double> _orb2;
   late final Animation<double> _logo;
 
-  static const _logoImage = NetworkImage(_logoUrl);
   bool _logoReady = false;
-  bool _precacheStarted = false;
   bool _navigated = false;
 
   @override
@@ -43,49 +41,70 @@ class _LoadingScreenState extends State<LoadingScreen>
       );
     } catch (_) {}
 
-    _orb1Ctrl =
-        AnimationController(vsync: this, duration: const Duration(seconds: 4))
-          ..repeat(reverse: true);
-    _orb2Ctrl =
-        AnimationController(vsync: this, duration: const Duration(seconds: 5))
-          ..repeat(reverse: true);
-    _ringCtrl =
-        AnimationController(vsync: this, duration: const Duration(seconds: 8))
-          ..repeat();
-    _logoCtrl =
-        AnimationController(vsync: this, duration: const Duration(seconds: 3))
-          ..repeat(reverse: true);
+    _orb1Ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+    _orb2Ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat(reverse: true);
+    _ringCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat();
+    _logoCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
 
-    _orb1 = Tween<double>(begin: 0, end: -10).animate(
-      CurvedAnimation(parent: _orb1Ctrl, curve: Curves.easeInOut),
-    );
-    _orb2 = Tween<double>(begin: 0, end: 10).animate(
-      CurvedAnimation(parent: _orb2Ctrl, curve: Curves.easeInOut),
-    );
-    _logo = Tween<double>(begin: 0, end: -6).animate(
-      CurvedAnimation(parent: _logoCtrl, curve: Curves.easeInOut),
-    );
+    _orb1 = Tween<double>(
+      begin: 0,
+      end: -10,
+    ).animate(CurvedAnimation(parent: _orb1Ctrl, curve: Curves.easeInOut));
+    _orb2 = Tween<double>(
+      begin: 0,
+      end: 10,
+    ).animate(CurvedAnimation(parent: _orb2Ctrl, curve: Curves.easeInOut));
+    _logo = Tween<double>(
+      begin: 0,
+      end: -6,
+    ).animate(CurvedAnimation(parent: _logoCtrl, curve: Curves.easeInOut));
 
-    _routeTimer = Timer(_loadingDuration, _goToWelcome);
+    _logoReady = true;
+    _routeTimer = Timer(_loadingDuration, () => _goToWelcome());
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_precacheStarted) return;
-    _precacheStarted = true;
-    precacheImage(_logoImage, context).then((_) {
-      if (!mounted) return;
-      setState(() => _logoReady = true);
-    }).catchError((_) {
-      if (!mounted) return;
-      setState(() => _logoReady = true);
-    });
-  }
-
-  void _goToWelcome() {
+  Future<void> _goToWelcome() async {
     if (!mounted || _navigated) return;
     _navigated = true;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // user already signed in — resolve role and navigate to correct home
+        final authService = FirebaseAuthService();
+        final verification = await authService.getVerificationState(
+          uid: user.uid,
+        );
+        final role = verification?.role?.trim().toLowerCase();
+        if (role == 'resident') {
+          if (!mounted) return;
+          Navigator.of(
+            context,
+          ).pushReplacementNamed(AppRoutes.residentDashboard);
+          return;
+        }
+        // default to worker dashboard for any other role or missing role
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed(AppRoutes.workerDashboard);
+        return;
+      }
+    } catch (_) {
+      // ignore and fall back to welcome
+    }
+
+    if (!mounted) return;
     Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
   }
 
@@ -109,7 +128,7 @@ class _LoadingScreenState extends State<LoadingScreen>
       backgroundColor: AppColors.deep,
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: _goToWelcome,
+        onTap: () => _goToWelcome(),
         child: Stack(
           children: [
             // Radial gradient overlays
@@ -143,9 +162,7 @@ class _LoadingScreenState extends State<LoadingScreen>
             ),
 
             // Background grid
-            Positioned.fill(
-              child: CustomPaint(painter: _GridPainter()),
-            ),
+            Positioned.fill(child: CustomPaint(painter: _GridPainter())),
 
             // Floating orbs
             AnimatedBuilder(
@@ -259,11 +276,15 @@ class _LoadingScreenState extends State<LoadingScreen>
                                 child: SizedBox(
                                   width: 138,
                                   height: 158,
-                                  child: Image(
-                                    image: _logoImage,
-                                    fit: BoxFit.contain,
-                                    gaplessPlayback: true,
-                                    errorBuilder: (_, _, _) => const SizedBox(),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Image.asset(
+                                      'assets/images/Kabayansynclogo.png',
+                                      fit: BoxFit.contain,
+                                      gaplessPlayback: true,
+                                      errorBuilder: (_, _, _) =>
+                                          const SizedBox(),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -337,8 +358,9 @@ class _LoadingScreenState extends State<LoadingScreen>
                                     borderRadius: BorderRadius.circular(999),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.orange
-                                            .withValues(alpha: 0.5),
+                                        color: AppColors.orange.withValues(
+                                          alpha: 0.5,
+                                        ),
                                         blurRadius: 10,
                                         spreadRadius: 0,
                                       ),

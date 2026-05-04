@@ -264,6 +264,7 @@ Future<Response> _handleScanRequest({
 
     final taskId = (jsonBody['taskId'] as String?)?.trim();
     final workerUid = (jsonBody['workerUid'] as String?)?.trim();
+    final workerName = (jsonBody['workerName'] as String?)?.trim();
     final selfieBase64 =
         (jsonBody['selfieImageBase64'] as String?)?.trim();
     final lat = jsonBody['lat'];
@@ -297,6 +298,8 @@ Future<Response> _handleScanRequest({
         selfieBytes: selfieBytes,
         lat: lat.toDouble(),
         lng: lng.toDouble(),
+        workerName:
+            (workerName != null && workerName.isNotEmpty) ? workerName : null,
       ),
     );
 
