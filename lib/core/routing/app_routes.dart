@@ -21,4 +21,6 @@ class AppRoutes {
   static const walletTransfer = '/wallet/transfer';
   static const adminTransactions = '/admin/transactions';
   static const adminWallet = '/admin/wallet';
+  static const adminDashboard = '/admin/dashboard';
+  static const adminProfile = '/admin/profile';
 }

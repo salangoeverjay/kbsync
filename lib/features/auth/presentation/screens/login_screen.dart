@@ -12,6 +12,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  static const String _adminEmail = 'admin@kabayan.com';
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = FirebaseAuthService();
@@ -43,9 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _onForgotPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter your email first.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter your email first.')));
       return;
     }
 
@@ -57,9 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_authMessage(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_authMessage(error))));
     }
   }
 
@@ -88,35 +90,52 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      final verificationState = await _authService.getVerificationState(uid: uid);
+      final verificationState = await _authService.getVerificationState(
+        uid: uid,
+      );
       if (!mounted) return;
 
-      if (verificationState == null || !verificationState.isApproved) {
+      final normalizedEmail = email.toLowerCase();
+      if (normalizedEmail == _adminEmail ||
+          verificationState?.role == 'admin') {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Complete ID and face verification before login.')),
+          const SnackBar(content: Text('Admin login successful.')),
         );
-        await _authService.signOut();
-        if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed(AppRoutes.verificationPrototype);
+        Navigator.of(context).pushReplacementNamed(AppRoutes.adminDashboard);
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login successful.')),
-      );
+      if (verificationState == null || !verificationState.isApproved) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Complete ID and face verification before login.'),
+          ),
+        );
+        if (!mounted) return;
+        Navigator.of(
+          context,
+        ).pushReplacementNamed(AppRoutes.verificationPrototype);
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Login successful.')));
       final route = verificationState.role == 'resident'
           ? AppRoutes.residentDashboard
           : AppRoutes.workerDashboard;
       Navigator.of(context).pushReplacementNamed(route);
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_authMessage(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_authMessage(error))));
     } on FirebaseException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Unable to verify account status.')),
+        SnackBar(
+          content: Text(error.message ?? 'Unable to verify account status.'),
+        ),
       );
     } finally {
       if (mounted) {
@@ -138,10 +157,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 IconButton(
                   onPressed: _isSubmitting
                       ? null
-                      : () => Navigator.of(context).pushReplacementNamed(AppRoutes.welcome),
+                      : () => Navigator.of(
+                          context,
+                        ).pushReplacementNamed(AppRoutes.welcome),
                   icon: const Icon(Icons.arrow_back, color: AppColors.plum),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(width: 24, height: 24),
+                  constraints: const BoxConstraints.tightFor(
+                    width: 24,
+                    height: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 const Expanded(
@@ -180,7 +204,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     value: _rememberMe,
                     onChanged: _isSubmitting
                         ? null
-                        : (value) => setState(() => _rememberMe = value ?? false),
+                        : (value) =>
+                              setState(() => _rememberMe = value ?? false),
                     side: const BorderSide(color: AppColors.plum, width: 1.2),
                     activeColor: AppColors.orange,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -207,10 +232,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: const Text(
                     'Forgot password?',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -225,7 +247,9 @@ class _LoginScreenState extends State<LoginScreen> {
               child: TextButton(
                 onPressed: _isSubmitting
                     ? null
-                    : () => Navigator.of(context).pushReplacementNamed(AppRoutes.signUp),
+                    : () => Navigator.of(
+                        context,
+                      ).pushReplacementNamed(AppRoutes.signUp),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
@@ -292,10 +316,7 @@ class _InputBlock extends StatelessWidget {
             controller: controller,
             keyboardType: keyboardType,
             obscureText: obscureText,
-            style: const TextStyle(
-              color: AppColors.plum,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: AppColors.plum, fontSize: 14),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(
@@ -304,14 +325,23 @@ class _InputBlock extends StatelessWidget {
               ),
               filled: true,
               fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.plum.withValues(alpha: 0.65), width: 0.4),
+                borderSide: BorderSide(
+                  color: AppColors.plum.withValues(alpha: 0.65),
+                  width: 0.4,
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.plum.withValues(alpha: 0.65), width: 0.4),
+                borderSide: BorderSide(
+                  color: AppColors.plum.withValues(alpha: 0.65),
+                  width: 0.4,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -329,10 +359,7 @@ class _LoginButton extends StatelessWidget {
   final VoidCallback? onTap;
   final bool isLoading;
 
-  const _LoginButton({
-    required this.onTap,
-    required this.isLoading,
-  });
+  const _LoginButton({required this.onTap, required this.isLoading});
 
   @override
   Widget build(BuildContext context) {

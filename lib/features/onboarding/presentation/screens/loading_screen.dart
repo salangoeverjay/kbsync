@@ -18,6 +18,7 @@ class LoadingScreen extends StatefulWidget {
 class _LoadingScreenState extends State<LoadingScreen>
     with TickerProviderStateMixin {
   static const _loadingDuration = Duration(milliseconds: 2400);
+  static const String _adminEmail = 'admin@kabayan.com';
 
   late final Timer _routeTimer;
   late final AnimationController _orb1Ctrl;
@@ -80,14 +81,39 @@ class _LoadingScreenState extends State<LoadingScreen>
     _navigated = true;
 
     try {
+      // Check if there's a currently logged-in user
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        // user already signed in — resolve role and navigate to correct home
+
+      // If NO user is logged in, go to welcome/login
+      if (user == null) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
+        return;
+      }
+
+      // User IS logged in - determine their role and route accordingly
+      final email = user.email?.trim().toLowerCase();
+
+      // Admin check: email match takes priority
+      if (email == _adminEmail) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed(AppRoutes.adminDashboard);
+        return;
+      }
+
+      // Check role from Firestore
+      try {
         final authService = FirebaseAuthService();
         final verification = await authService.getVerificationState(
           uid: user.uid,
         );
         final role = verification?.role?.trim().toLowerCase();
+
+        if (role == 'admin') {
+          if (!mounted) return;
+          Navigator.of(context).pushReplacementNamed(AppRoutes.adminDashboard);
+          return;
+        }
         if (role == 'resident') {
           if (!mounted) return;
           Navigator.of(
@@ -95,17 +121,19 @@ class _LoadingScreenState extends State<LoadingScreen>
           ).pushReplacementNamed(AppRoutes.residentDashboard);
           return;
         }
-        // default to worker dashboard for any other role or missing role
-        if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed(AppRoutes.workerDashboard);
-        return;
+      } catch (_) {
+        // Role check failed, fall through to worker default
       }
-    } catch (_) {
-      // ignore and fall back to welcome
-    }
 
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
+      // Default to worker dashboard for any other role or missing role
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed(AppRoutes.workerDashboard);
+      return;
+    } catch (_) {
+      // Catch-all: any error, go to welcome
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
+    }
   }
 
   @override

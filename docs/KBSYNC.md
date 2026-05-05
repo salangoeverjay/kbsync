@@ -238,7 +238,15 @@ Enforcement:
 - dart run bin/server.dart
 - cd c:\Users\salan\OneDrive\Documents\kbsync
 - firebase emulators:start --only functions
-- flutter run --dart-define=KBSYNC_ID_VERIFIER_API_BASE_URL=http://192.168.254.100:8080 --dart-define=KBSYNC_USE_FUNCTIONS_EMULATOR=true --dart-define=KBSYNC_FUNCTIONS_EMULATOR_HOST=192.168.254.100 --dart-define=KBSYNC_FUNCTIONS_EMULATOR_PORT=5001            
+- adb reverse tcp:8080 tcp:8080
+- adb reverse tcp:5001 tcp:5001
+- flutter run -d af735c7c `
+  --dart-define=KBSYNC_ID_VERIFIER_API_BASE_URL=https://giblet-saga-jawless.ngrok-free.dev `
+  --dart-define=KBSYNC_USE_FUNCTIONS_EMULATOR=true `
+  --dart-define=KBSYNC_FUNCTIONS_EMULATOR_HOST=https://giblet-saga-jawless.ngrok-free.dev `
+  --dart-define=KBSYNC_FUNCTIONS_EMULATOR_PORT=5001
+- Run `flutter devices` first and replace `<your-android-device-id>` with the connected phone's ID, such as `af735c7c`.
+- If you want to run Windows too, install Visual Studio with the "Desktop development with C++" workload first.
 
 ### If Gradle Fails With an Immutable Kotlin DSL Workspace Error
 - Stop any running Gradle daemons with `gradlew --stop` from the project root.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:kbsync/core/routing/app_routes.dart';
@@ -46,143 +48,153 @@ class HirerMapScreen extends StatelessWidget {
   }
 }
 
-class _MapBackground extends StatelessWidget {
+class _MapBackground extends StatefulWidget {
+  @override
+  State<_MapBackground> createState() => _MapBackgroundState();
+}
+
+class _MapBackgroundState extends State<_MapBackground> {
   static const _locationService = ResidentLocationService();
   static final _workerService = NearbyWorkerService();
   static const _distance = Distance();
+  static const _mapZoom = 15.5;
+
+  final MapController _mapController = MapController();
+  StreamSubscription<LatLng>? _locationSubscription;
+  LatLng _center = ResidentLocationService.fallbackLocation;
+  bool _mapReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _locationSubscription = _locationService.locationStream().listen((
+      position,
+    ) {
+      if (!mounted) return;
+      setState(() {
+        _center = position;
+      });
+      if (_mapReady) {
+        _mapController.move(position, _mapZoom);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    _mapController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<LatLng>(
-      stream: _locationService.locationStream(),
-      initialData: ResidentLocationService.fallbackLocation,
-      builder: (context, snapshot) {
-        final center =
-            snapshot.data ?? ResidentLocationService.fallbackLocation;
-        return StreamBuilder<List<NearbyWorkerMarker>>(
-          stream: _workerService.watchAvailableWorkers(),
-          initialData: const <NearbyWorkerMarker>[],
-          builder: (context, workerSnapshot) {
-            final workers =
-                (workerSnapshot.data ?? const <NearbyWorkerMarker>[])
-                    .where(
-                      (worker) =>
-                          _distance.as(
-                            LengthUnit.Meter,
-                            center,
-                            worker.position,
-                          ) <=
-                          kNearbyRadiusMeters,
-                    )
-                    .toList(growable: false);
+    return StreamBuilder<List<NearbyWorkerMarker>>(
+      stream: _workerService.watchAvailableWorkers(),
+      initialData: const <NearbyWorkerMarker>[],
+      builder: (context, workerSnapshot) {
+        final workers = (workerSnapshot.data ?? const <NearbyWorkerMarker>[])
+            .where(
+              (worker) =>
+                  _distance.as(LengthUnit.Meter, _center, worker.position) <=
+                  kNearbyRadiusMeters,
+            )
+            .toList(growable: false);
 
-            return Stack(
+        return Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _center,
+                initialZoom: _mapZoom,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all,
+                ),
+                onMapReady: () {
+                  _mapReady = true;
+                  _mapController.move(_center, _mapZoom);
+                },
+              ),
               children: [
-                FlutterMap(
-                  key: ValueKey<String>(
-                    '${center.latitude.toStringAsFixed(6)}:${center.longitude.toStringAsFixed(6)}:${workers.length}',
-                  ),
-                  options: MapOptions(
-                    initialCenter: center,
-                    initialZoom: 15.5,
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.all,
-                    ),
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.kbsync',
-                    ),
-                    CircleLayer(
-                      circles: [
-                        CircleMarker(
-                          point: center,
-                          radius: kMapCircleRadiusMeters,
-                          useRadiusInMeter: true,
-                          color: AppColors.orange.withValues(alpha: 0.08),
-                          borderColor: AppColors.orange.withValues(alpha: 0.7),
-                          borderStrokeWidth: 2,
-                        ),
-                      ],
-                    ),
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: center,
-                          width: 18,
-                          height: 18,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.orange,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 2.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                        ...workers.map(
-                          (worker) => Marker(
-                            point: worker.position,
-                            width: 32,
-                            height: 32,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFC6E62),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.25),
-                                    blurRadius: 8,
-                                  ),
-                                ],
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  '👤',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.kbsync',
+                ),
+                CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: _center,
+                      radius: kMapCircleRadiusMeters,
+                      useRadiusInMeter: true,
+                      color: AppColors.orange.withValues(alpha: 0.08),
+                      borderColor: AppColors.orange.withValues(alpha: 0.7),
+                      borderStrokeWidth: 2,
                     ),
                   ],
                 ),
-                Positioned(
-                  top: 8,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'YOU ARE HERE',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 9,
-                        color: Colors.white,
-                        letterSpacing: 1,
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _center,
+                      width: 18,
+                      height: 18,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.orange,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2.5),
+                        ),
                       ),
                     ),
-                  ),
+                    ...workers.map(
+                      (worker) => Marker(
+                        point: worker.position,
+                        width: 32,
+                        height: 32,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFC6E62),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Text('👤', style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            );
-          },
+            ),
+            Positioned(
+              top: 8,
+              right: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'YOU ARE HERE',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 9,
+                    color: Colors.white,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
       },
     );

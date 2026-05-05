@@ -242,6 +242,20 @@ class ResidentTaskService {
       final residentRef = _firestore.collection('users').doc(uid);
       final workerTxRef = workerRef.collection('wallet_transactions').doc();
       final residentTxRef = residentRef.collection('wallet_transactions').doc();
+      final topLevelWorkerTxRef = _firestore
+          .collection('wallet_transactions')
+          .doc();
+      final topLevelResidentTxRef = _firestore
+          .collection('wallet_transactions')
+          .doc();
+      final platformFeeTxRef = _firestore
+          .collection('wallet_transactions')
+          .doc();
+
+      // Calculate 10% service fee
+      final serviceFee = amount * 0.10;
+      final totalDebit = amount + serviceFee;
+
       final workerName = (task['worker'] as String?)?.trim().isNotEmpty == true
           ? (task['worker'] as String).trim()
           : 'Worker';
@@ -267,21 +281,35 @@ class ResidentTaskService {
           final residentSnap = await tx.get(residentRef);
           final residentData = residentSnap.data() ?? const <String, dynamic>{};
           final balance = _parseAmount(residentData['walletBalance']);
-          if (balance < amount) {
-            throw StateError('Not enough wallet balance to pay this worker.');
+          if (balance < totalDebit) {
+            throw StateError(
+              'Not enough wallet balance to pay this worker (includes 10% service fee).',
+            );
           }
 
           tx.update(residentRef, {
-            'walletBalance': FieldValue.increment(-amount),
+            'walletBalance': FieldValue.increment(-totalDebit),
             'updatedAt': FieldValue.serverTimestamp(),
           });
 
           tx.set(residentTxRef, {
             'title': 'Task Payment',
             'subtitle': 'Paid to $workerName',
-            'amount': -amount,
+            'amount': -totalDebit,
             'isCredit': false,
             'category': 'task_payment',
+            'taskId': taskId,
+            'serviceFee': serviceFee,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          // Record in top-level collection for admin visibility
+          tx.set(topLevelResidentTxRef, {
+            'userId': uid,
+            'userName': uid,
+            'type': 'debit',
+            'amount': (totalDebit * 100).toInt(),
+            'meta': 'Task Payment to $workerName',
             'taskId': taskId,
             'createdAt': FieldValue.serverTimestamp(),
           });
@@ -301,6 +329,35 @@ class ResidentTaskService {
           'amount': amount,
           'isCredit': true,
           'category': 'task_payment',
+          'taskId': taskId,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Record worker payment in top-level collection for admin visibility
+        tx.set(topLevelWorkerTxRef, {
+          'userId': workerUid,
+          'userName': workerName,
+          'type': 'credit',
+          'amount': (amount * 100).toInt(),
+          'meta': 'Task Payment from resident',
+          'taskId': taskId,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Record platform fee in top-level collection and increment platform balance
+        final platformRef = _firestore
+            .collection('platform_accounts')
+            .doc('platform');
+        tx.set(platformRef, {
+          'balance': FieldValue.increment((serviceFee * 100).toInt()),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        tx.set(platformFeeTxRef, {
+          'userId': 'platform',
+          'type': 'credit',
+          'amount': (serviceFee * 100).toInt(),
+          'meta': 'Service fee from task $taskId',
           'taskId': taskId,
           'createdAt': FieldValue.serverTimestamp(),
         });

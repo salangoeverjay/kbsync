@@ -23,6 +23,8 @@ import 'package:kbsync/features/wallet/presentation/screens/wallet_screen.dart';
 import 'package:kbsync/features/worker/presentation/screens/worker_dashboard_screen.dart';
 import 'package:kbsync/features/admin/presentation/screens/admin_transactions_screen.dart';
 import 'package:kbsync/features/admin/presentation/screens/admin_wallet_screen.dart';
+import 'package:kbsync/features/admin/presentation/screens/admin_dashboard_screen.dart';
+import 'package:kbsync/features/admin/presentation/screens/admin_profile_screen.dart';
 
 class KbSyncApp extends StatelessWidget {
   const KbSyncApp({super.key});
@@ -79,8 +81,10 @@ class KbSyncApp extends StatelessWidget {
         AppRoutes.wallet: (_) => const WalletScreen(),
         AppRoutes.walletCashIn: (_) => const CashInScreen(),
         AppRoutes.walletTransfer: (_) => const TransferScreen(),
-        AppRoutes.adminTransactions: (_) => const AdminTransactionsScreen(),
+        AppRoutes.adminTransactions: (_) => const AdminDashboardScreen(),
         AppRoutes.adminWallet: (_) => const AdminWalletScreen(),
+        AppRoutes.adminDashboard: (_) => const AdminDashboardScreen(),
+        AppRoutes.adminProfile: (_) => const AdminProfileScreen(),
       },
     );
   }
